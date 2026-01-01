@@ -796,6 +796,11 @@ func StartDevServers(projectPath string) {
 	ui.Newline()
 	ui.Success("Build something great!")
 	ui.Newline()
+
+	// Show tip about vel shell function
+	ui.Muted("Tip: Add this to ~/.zshrc to use 'vel' instead of './vel':")
+	ui.Muted("  vel() { if [ -x \"./vel\" ]; then ./vel \"$@\"; else echo \"vel not found\"; fi }")
+	ui.Newline()
 }
 
 func setupTemplatesAndHotReload(projectPath string) error {
