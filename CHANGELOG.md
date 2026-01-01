@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.3] - 2026-01-01
+
+### Fixed
+- correct stub paths to app/http/, disable init command
+
 ## [0.4.2] - 2026-01-01
 
 ### Changed
