@@ -52,11 +52,6 @@ func generateFilesFromStubs(config ProjectConfig) error {
 		return err
 	}
 
-	// Copy cmd/vel/main.go with template processing
-	if err := copyStubFileWithConfig("cmd/vel/main.go.stub", filepath.Join(config.Name, "cmd", "vel", "main.go"), config); err != nil {
-		return err
-	}
-
 	// Copy home controller
 	if err := copyStubFile("app/http/controllers/home_controller.go.stub", filepath.Join(config.Name, "app", "http", "controllers", "home_controller.go")); err != nil {
 		return err
