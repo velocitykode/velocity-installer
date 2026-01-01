@@ -798,8 +798,8 @@ func StartDevServers(projectPath string) {
 	ui.Newline()
 
 	// Show tip about vel shell function
-	ui.Muted("Tip: Add this to ~/.zshrc to use 'vel' instead of './vel':")
-	ui.Muted("  vel() { if [ -x \"./vel\" ]; then ./vel \"$@\"; else echo \"vel not found\"; fi }")
+	ui.Muted("Tip: Run this once to use 'vel' instead of './vel':")
+	ui.Muted(`  grep -q "vel()" ~/.zshrc || echo 'vel() { [ -x ./vel ] && ./vel "$@" || echo "vel: not found"; }' >> ~/.zshrc && source ~/.zshrc`)
 	ui.Newline()
 }
 
