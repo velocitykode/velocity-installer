@@ -758,15 +758,8 @@ func main() {
 	}
 	defer os.Remove(tmpFile)
 
-	// Build
-	buildCmd := exec.Command("go", "build", "-o", fmt.Sprintf("%s/migrate", tmpDir), tmpFile)
-	buildOutput, err := buildCmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("failed to build migration runner: %w\n%s", err, string(buildOutput))
-	}
-
-	// Run
-	runCmd := exec.Command(fmt.Sprintf("%s/migrate", tmpDir))
+	// Run with go run (uses module mode)
+	runCmd := exec.Command("go", "run", tmpFile)
 	runCmd.Stdout = os.Stdout
 	runCmd.Stderr = os.Stderr
 
