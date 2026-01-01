@@ -52,13 +52,18 @@ func generateFilesFromStubs(config ProjectConfig) error {
 		return err
 	}
 
+	// Copy cmd/vel/main.go with template processing
+	if err := copyStubFileWithConfig("cmd/vel/main.go.stub", filepath.Join(config.Name, "cmd", "vel", "main.go"), config); err != nil {
+		return err
+	}
+
 	// Copy home controller
-	if err := copyStubFileWithConfig("app/controllers/home_controller.go.stub", filepath.Join(config.Name, "app", "controllers", "home_controller.go"), config); err != nil {
+	if err := copyStubFile("app/http/controllers/home_controller.go.stub", filepath.Join(config.Name, "app", "http", "controllers", "home_controller.go")); err != nil {
 		return err
 	}
 
 	// Copy middleware
-	if err := copyStubFile("app/middleware/middleware.go.stub", filepath.Join(config.Name, "app", "middleware", "middleware.go")); err != nil {
+	if err := copyStubFile("app/http/middleware/middleware.go.stub", filepath.Join(config.Name, "app", "http", "middleware", "middleware.go")); err != nil {
 		return err
 	}
 
@@ -81,10 +86,7 @@ func generateFilesFromStubs(config ProjectConfig) error {
 
 	// Copy auth files if auth is enabled
 	if config.Auth {
-		if err := copyStubFile("app/controllers/auth_controller.go.stub", filepath.Join(config.Name, "app", "controllers", "auth_controller.go")); err != nil {
-			return err
-		}
-		if err := copyStubFile("app/middleware/auth.go.stub", filepath.Join(config.Name, "app", "middleware", "auth.go")); err != nil {
+		if err := copyStubFile("app/http/middleware/auth.go.stub", filepath.Join(config.Name, "app", "http", "middleware", "auth.go")); err != nil {
 			return err
 		}
 	}

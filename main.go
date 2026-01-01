@@ -38,7 +38,7 @@ func main() {
 	commands.InstallerVersion = Version
 
 	rootCmd.AddCommand(commands.NewCmd)
-	rootCmd.AddCommand(commands.InitCmd)
+	// rootCmd.AddCommand(commands.InitCmd) // TODO: Re-enable after fixing stub generation
 	rootCmd.AddCommand(commands.ConfigCmd)
 	rootCmd.AddCommand(commands.SelfUpdateCmd)
 
