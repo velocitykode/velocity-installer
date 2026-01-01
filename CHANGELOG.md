@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.4] - 2026-01-01
+
+### Fixed
+- remove cmd/vel stub reference that broke build
+
 ## [0.4.3] - 2026-01-01
 
 ### Fixed
