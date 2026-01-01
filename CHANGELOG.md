@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] - 2026-01-01
+
+### Added
+- add shell function tip after project creation
+
 ## [0.2.0] - 2026-01-01
 
 ### Added
