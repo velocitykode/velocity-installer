@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] - 2026-01-01
+
+### Added
+- add one-liner to setup vel shell function
+
 ## [0.3.0] - 2026-01-01
 
 ### Added
