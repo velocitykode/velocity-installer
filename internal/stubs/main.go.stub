@@ -1,0 +1,43 @@
+package main
+
+import (
+	"net/http"
+	"os"
+
+	"{{.Module}}/app/middleware"
+	_ "{{.Module}}/routes" // Import all route files
+
+	"github.com/velocitystack/velocity/pkg/log"
+	"github.com/velocitystack/velocity/pkg/router"
+)
+
+func main() {
+	// Logger auto-initializes from .env
+	log.Info("Application started")
+
+	// Get the global router
+	r := router.Get()
+
+	// Apply global middleware
+	r.Use(
+		middleware.RecoveryMiddleware, // Catch panics first
+		middleware.LoggingMiddleware,  // Log all requests
+		middleware.CORSMiddleware,     // Handle CORS
+	)
+
+	// Load all registered routes
+	router.LoadRoutes()
+
+	// Get port from environment or default to 4000
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "4000"
+	}
+
+	log.Info("Server starting", "port", port)
+
+	// Start the server with our router
+	if err := http.ListenAndServe(":"+port, r); err != nil {
+		log.Error("Server failed to start", "error", err)
+	}
+}
