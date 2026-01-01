@@ -2,7 +2,7 @@ version: 2
 
 builds:
   - id: velocity
-    main: ./cmd/velocity
+    main: .
     binary: velocity-{{ .Os }}-{{ .Arch }}
     env:
       - CGO_ENABLED=0
