@@ -1,3 +1,4 @@
+// Velocity installer - creates and manages Velocity projects
 package main
 
 import (
