@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] - 2026-01-01
+
+### Fixed
+- use go run for module-aware migration execution
+
 ## [0.5.0] - 2026-01-01
 
 ### Added
