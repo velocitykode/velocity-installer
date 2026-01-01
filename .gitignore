@@ -1,0 +1,12 @@
+# Binary
+velocity
+velocity-*
+!velocity-*.go
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
