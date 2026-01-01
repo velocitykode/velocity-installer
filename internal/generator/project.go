@@ -495,7 +495,35 @@ func createEnvFiles(config ProjectConfig) error {
 	// Replace crypto key in .env using sed
 	cmd = exec.Command("sh", "-c",
 		fmt.Sprintf("cd '%s' && sed -i '' 's|^CRYPTO_KEY=.*|CRYPTO_KEY=base64:%s|' .env", absPath, newKey))
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
+
+	// Update DB settings based on config
+	if config.Database != "" && config.Database != "sqlite" {
+		ports := map[string]string{"postgres": "5432", "mysql": "3306"}
+		username := os.Getenv("USER")
+
+		// Update DB_CONNECTION, DB_PORT, DB_DATABASE, DB_USERNAME
+		sedCmds := fmt.Sprintf(
+			"sed -i '' 's|^DB_CONNECTION=.*|DB_CONNECTION=%s|; s|^DB_PORT=.*|DB_PORT=%s|; s|^DB_DATABASE=.*|DB_DATABASE=%s|; s|^DB_USERNAME=.*|DB_USERNAME=%s|' .env",
+			config.Database, ports[config.Database], config.Name, username)
+		cmd = exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && %s", absPath, sedCmds))
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	// Update CACHE_DRIVER based on config
+	if config.Cache != "" && config.Cache != "memory" {
+		cmd = exec.Command("sh", "-c",
+			fmt.Sprintf("cd '%s' && sed -i '' 's|^CACHE_DRIVER=.*|CACHE_DRIVER=%s|' .env", absPath, config.Cache))
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // generateCryptoKey generates a new 32-byte base64 encoded key

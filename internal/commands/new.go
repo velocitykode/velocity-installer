@@ -12,8 +12,6 @@ import (
 var (
 	database string
 	cache    string
-	auth     bool
-	api      bool
 )
 
 var NewCmd = &cobra.Command{
@@ -28,10 +26,8 @@ var NewCmd = &cobra.Command{
 			ui.Muted("Usage: velocity new [project-name]")
 			ui.Newline()
 			ui.Muted("Flags:")
-			ui.Muted("  --database    Database driver (postgres, mysql, sqlite)")
+			ui.Muted("  --database    Database driver (postgres, sqlite)")
 			ui.Muted("  --cache       Cache driver (redis, memory)")
-			ui.Muted("  --auth        Include authentication scaffolding")
-			ui.Muted("  --api         API-only structure (no views)")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -46,8 +42,6 @@ var NewCmd = &cobra.Command{
 			Module:   projectName,
 			Database: database,
 			Cache:    cache,
-			Auth:     auth,
-			API:      api,
 		}
 
 		if err := generator.CreateProject(config); err != nil {
@@ -75,8 +69,6 @@ var NewCmd = &cobra.Command{
 }
 
 func init() {
-	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, mysql, sqlite)")
+	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, sqlite)")
 	NewCmd.Flags().StringVar(&cache, "cache", "memory", "Cache driver (redis, memory)")
-	NewCmd.Flags().BoolVar(&auth, "auth", false, "Include authentication scaffolding")
-	NewCmd.Flags().BoolVar(&api, "api", false, "API-only structure (no views)")
 }
