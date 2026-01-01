@@ -640,7 +640,7 @@ func runMigrations(projectPath string) error {
 	defer os.Chdir(originalDir)
 
 	// Create temporary migration runner script
-	tmpDir := ".velocity/tmp"
+	tmpDir := ".vel/tmp"
 	os.MkdirAll(tmpDir, 0755)
 
 	// Get module name

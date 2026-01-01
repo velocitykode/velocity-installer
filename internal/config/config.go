@@ -27,13 +27,13 @@ var validDatabases = []string{"postgres", "mysql", "sqlite"}
 var validCaches = []string{"redis", "memory"}
 var validQueues = []string{"redis", "database"}
 
-// ConfigDir returns the path to the .velocity directory
+// ConfigDir returns the path to the .vel directory
 func ConfigDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".velocity"), nil
+	return filepath.Join(home, ".vel"), nil
 }
 
 // ConfigPath returns the path to the config.yaml file

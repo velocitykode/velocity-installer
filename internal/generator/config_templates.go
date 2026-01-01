@@ -105,7 +105,7 @@ coverage.html
 Thumbs.db
 
 # Velocity
-.velocity/
+.vel/
 
 # Logs
 *.log

@@ -14,8 +14,8 @@ func IsVelocityProject() bool {
 		return true
 	}
 
-	// Check for .velocity marker file
-	if _, err := os.Stat(".velocity"); err == nil {
+	// Check for .vel marker file
+	if _, err := os.Stat(".vel"); err == nil {
 		return true
 	}
 
