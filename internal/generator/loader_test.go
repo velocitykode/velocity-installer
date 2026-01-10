@@ -25,6 +25,7 @@ func TestRunStep_Error(t *testing.T) {
 	expectedErr := errors.New("test error")
 
 	duration, err := runStep("Test step with error", func() error {
+		time.Sleep(1 * time.Millisecond) // Ensure non-zero duration
 		return expectedErr
 	})
 

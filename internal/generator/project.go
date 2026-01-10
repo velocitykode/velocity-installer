@@ -159,16 +159,16 @@ func replaceModuleName(projectPath, moduleName string) error {
 		return fmt.Errorf("replace go files: %w: %s", err, string(output))
 	}
 
-	// Replace in go.mod
+	// Replace in go.mod (if exists)
 	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && sed -i '' 's|{{MODULE_NAME}}|%s|g' go.mod", absPath, moduleName))
+		fmt.Sprintf("cd '%s' && [ -f go.mod ] && sed -i '' 's|{{MODULE_NAME}}|%s|g' go.mod || true", absPath, moduleName))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("replace go.mod: %w: %s", err, string(output))
 	}
 
-	// Replace in package.json
+	// Replace in package.json (if exists)
 	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && sed -i '' 's|{{MODULE_NAME}}|%s|g' package.json", absPath, moduleName))
+		fmt.Sprintf("cd '%s' && [ -f package.json ] && sed -i '' 's|{{MODULE_NAME}}|%s|g' package.json || true", absPath, moduleName))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("replace package.json: %w: %s", err, string(output))
 	}
@@ -178,19 +178,23 @@ func replaceModuleName(projectPath, moduleName string) error {
 		fmt.Sprintf("cd '%s' && [ -f package-lock.json ] && sed -i '' 's|{{MODULE_NAME}}|%s|g' package-lock.json || true", absPath, moduleName))
 	cmd.Run() // Ignore error - file may not exist
 
-	// Remove replace directive and fetch pinned version
-	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && sed -i '' '/^replace github.com\\/velocitykode\\/velocity/d' go.mod", absPath))
-	if err := cmd.Run(); err != nil {
-		return err
-	}
+	// Only process go.mod if it exists
+	goModPath := filepath.Join(absPath, "go.mod")
+	if _, err := os.Stat(goModPath); err == nil {
+		// Remove replace directive
+		cmd = exec.Command("sh", "-c",
+			fmt.Sprintf("cd '%s' && sed -i '' '/^replace github.com\\/velocitykode\\/velocity/d' go.mod", absPath))
+		if err := cmd.Run(); err != nil {
+			return err
+		}
 
-	// Set pinned version of velocity framework (fetched from GitHub releases)
-	velocityVersion := getLatestVelocityVersion()
-	cmd = exec.Command("go", "mod", "edit", fmt.Sprintf("-require=github.com/velocitykode/velocity@%s", velocityVersion))
-	cmd.Dir = absPath
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to set velocity framework version: %w", err)
+		// Set pinned version of velocity framework (fetched from GitHub releases)
+		velocityVersion := getLatestVelocityVersion()
+		cmd = exec.Command("go", "mod", "edit", fmt.Sprintf("-require=github.com/velocitykode/velocity@%s", velocityVersion))
+		cmd.Dir = absPath
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to set velocity framework version: %w", err)
+		}
 	}
 
 	return nil
@@ -203,6 +207,11 @@ func reinitGitRepo(projectPath string) error {
 		return err
 	}
 
+	// Verify project directory exists
+	if _, err := os.Stat(absPath); os.IsNotExist(err) {
+		return fmt.Errorf("project directory does not exist: %s", absPath)
+	}
+
 	// Remove .git directory
 	gitDir := filepath.Join(absPath, ".git")
 	if err := os.RemoveAll(gitDir); err != nil {
@@ -211,7 +220,9 @@ func reinitGitRepo(projectPath string) error {
 
 	// Initialize new git repo
 	originalDir, _ := os.Getwd()
-	os.Chdir(absPath)
+	if err := os.Chdir(absPath); err != nil {
+		return fmt.Errorf("failed to change to project directory: %w", err)
+	}
 	defer os.Chdir(originalDir)
 
 	exec.Command("git", "init").Run()
@@ -373,9 +384,16 @@ func createDirectoryStructure(projectPath string) error {
 }
 
 func initGoModule(config ProjectConfig) error {
+	// Verify project directory exists
+	if _, err := os.Stat(config.Name); os.IsNotExist(err) {
+		return fmt.Errorf("project directory does not exist: %s", config.Name)
+	}
+
 	// Change to project directory
 	originalDir, _ := os.Getwd()
-	os.Chdir(config.Name)
+	if err := os.Chdir(config.Name); err != nil {
+		return fmt.Errorf("failed to change to project directory: %w", err)
+	}
 	defer os.Chdir(originalDir)
 
 	// Initialize go module
@@ -504,10 +522,13 @@ func createEnvFiles(config ProjectConfig) error {
 		ports := map[string]string{"postgres": "5432", "mysql": "3306"}
 		username := os.Getenv("USER")
 
+		// Use base name for database name (not full path)
+		dbName := filepath.Base(config.Name)
+
 		// Update DB_CONNECTION, DB_PORT, DB_DATABASE, DB_USERNAME
 		sedCmds := fmt.Sprintf(
 			"sed -i '' 's|^DB_CONNECTION=.*|DB_CONNECTION=%s|; s|^DB_PORT=.*|DB_PORT=%s|; s|^DB_DATABASE=.*|DB_DATABASE=%s|; s|^DB_USERNAME=.*|DB_USERNAME=%s|' .env",
-			config.Database, ports[config.Database], config.Name, username)
+			config.Database, ports[config.Database], dbName, username)
 		cmd = exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && %s", absPath, sedCmds))
 		if err := cmd.Run(); err != nil {
 			return err
