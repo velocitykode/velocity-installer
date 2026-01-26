@@ -73,7 +73,7 @@ func CreateProject(config ProjectConfig) error {
 
 	// Clone template
 	if err := ui.Spinner("Cloning template", func() error {
-		return cloneTemplate(config.Name)
+		return cloneTemplate(config.Name, config.API)
 	}); err != nil {
 		return fmt.Errorf("failed to clone template: %w", err)
 	}
@@ -115,7 +115,7 @@ func CreateProject(config ProjectConfig) error {
 
 	// Install dependencies
 	ui.Info("Installing dependencies")
-	if err := installDependencies(config.Name); err != nil {
+	if err := installDependencies(config.Name, config.API); err != nil {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
 
@@ -130,13 +130,18 @@ func CreateProject(config ProjectConfig) error {
 	return nil
 }
 
-// cloneTemplate clones the velocity-template
-func cloneTemplate(projectName string) error {
+// cloneTemplate clones the appropriate velocity template
+func cloneTemplate(projectName string, apiOnly bool) error {
+	templateRepo := "velocity-template"
+	if apiOnly {
+		templateRepo = "velocity-template-api"
+	}
+
 	// Use git clone directly (gh repo clone can use stale cache)
-	cmd := exec.Command("git", "clone", "--depth=1", "git@github.com:velocitykode/velocity-template.git", projectName)
+	cmd := exec.Command("git", "clone", "--depth=1", "git@github.com:velocitykode/"+templateRepo+".git", projectName)
 	if err := cmd.Run(); err != nil {
 		// Try HTTPS fallback
-		cmd = exec.Command("git", "clone", "--depth=1", "https://github.com/velocitykode/velocity-template.git", projectName)
+		cmd = exec.Command("git", "clone", "--depth=1", "https://github.com/velocitykode/"+templateRepo+".git", projectName)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to clone template: %w", err)
 		}
@@ -233,7 +238,7 @@ func reinitGitRepo(projectPath string) error {
 }
 
 // installDependencies runs go mod tidy and bun install in parallel
-func installDependencies(projectPath string) error {
+func installDependencies(projectPath string, apiOnly bool) error {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
 		return err
@@ -258,21 +263,38 @@ func installDependencies(projectPath string) error {
 	// Check if air is already installed
 	airInstalled := isAirInstalled()
 
-	// Print initial tree
+	// Print initial tree (skip JS for API-only projects)
 	printDepTree := func() {
-		ui.TreeItem("├─", goStatus.name, goStatus.status, goStatus.done)
-		ui.TreeItem("├─", jsStatus.name, jsStatus.status, jsStatus.done)
-		if airInstalled {
-			ui.TreeItemSkipped("└─", airStatus.name, "already installed")
+		if apiOnly {
+			ui.TreeItem("├─", goStatus.name, goStatus.status, goStatus.done)
+			if airInstalled {
+				ui.TreeItemSkipped("└─", airStatus.name, "already installed")
+			} else {
+				ui.TreeItem("└─", airStatus.name, airStatus.status, airStatus.done)
+			}
 		} else {
-			ui.TreeItem("└─", airStatus.name, airStatus.status, airStatus.done)
+			ui.TreeItem("├─", goStatus.name, goStatus.status, goStatus.done)
+			ui.TreeItem("├─", jsStatus.name, jsStatus.status, jsStatus.done)
+			if airInstalled {
+				ui.TreeItemSkipped("└─", airStatus.name, "already installed")
+			} else {
+				ui.TreeItem("└─", airStatus.name, airStatus.status, airStatus.done)
+			}
 		}
 	}
 
 	printDepTree()
 
-	// Run Go and JS deps in parallel
-	done := make(chan bool, 3)
+	// Determine number of tasks
+	numTasks := 3
+	linesToClear := 3
+	if apiOnly {
+		numTasks = 2
+		linesToClear = 2
+	}
+
+	// Run deps in parallel
+	done := make(chan bool, numTasks)
 
 	// Go dependencies
 	go func() {
@@ -286,20 +308,22 @@ func installDependencies(projectPath string) error {
 		done <- true
 	}()
 
-	// JS dependencies
-	go func() {
-		if err := exec.Command("bun", "install").Run(); err != nil {
-			// Try npm as fallback
-			jsStatus.err = exec.Command("npm", "install").Run()
-		}
-		if jsStatus.err == nil {
-			jsStatus.status = "done"
-			jsStatus.done = true
-		} else {
-			jsStatus.status = "failed"
-		}
-		done <- true
-	}()
+	// JS dependencies (skip for API-only projects)
+	if !apiOnly {
+		go func() {
+			if err := exec.Command("bun", "install").Run(); err != nil {
+				// Try npm as fallback
+				jsStatus.err = exec.Command("npm", "install").Run()
+			}
+			if jsStatus.err == nil {
+				jsStatus.status = "done"
+				jsStatus.done = true
+			} else {
+				jsStatus.status = "failed"
+			}
+			done <- true
+		}()
+	}
 
 	// Air installation (only if not already installed)
 	go func() {
@@ -313,11 +337,11 @@ func installDependencies(projectPath string) error {
 
 	// Wait for all to complete, updating display
 	completed := 0
-	for completed < 3 {
+	for completed < numTasks {
 		<-done
 		completed++
 		// Clear and redraw tree
-		ui.ClearLines(3)
+		ui.ClearLines(linesToClear)
 		printDepTree()
 	}
 
@@ -325,7 +349,7 @@ func installDependencies(projectPath string) error {
 	if goStatus.err != nil {
 		return goStatus.err
 	}
-	if jsStatus.err != nil {
+	if !apiOnly && jsStatus.err != nil {
 		return jsStatus.err
 	}
 
@@ -805,20 +829,22 @@ func getProjectModuleName() (string, error) {
 }
 
 // StartDevServers starts npm run dev and go run main.go in background
-func StartDevServers(projectPath string) {
+func StartDevServers(projectPath string, apiOnly bool) {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
 		ui.Error(fmt.Sprintf("Failed to resolve project path: %v", err))
 		return
 	}
 
-	// Start npm run dev in background (detached)
-	npmCmd := exec.Command("npm", "run", "dev")
-	npmCmd.Dir = absPath
-	npmCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	if err := npmCmd.Start(); err != nil {
-		ui.Error(fmt.Sprintf("Failed to start npm: %v", err))
-		return
+	// Start npm run dev in background (detached) - skip for API-only projects
+	if !apiOnly {
+		npmCmd := exec.Command("npm", "run", "dev")
+		npmCmd.Dir = absPath
+		npmCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		if err := npmCmd.Start(); err != nil {
+			ui.Error(fmt.Sprintf("Failed to start npm: %v", err))
+			return
+		}
 	}
 
 	// Start air for hot reloading (detached)
@@ -832,7 +858,9 @@ func StartDevServers(projectPath string) {
 
 	// Show URLs
 	ui.Step(fmt.Sprintf("cd %s", projectPath))
-	ui.KeyValue("Vite", ui.Highlight("http://localhost:5173"))
+	if !apiOnly {
+		ui.KeyValue("Vite", ui.Highlight("http://localhost:5173"))
+	}
 	ui.KeyValue("Velocity", ui.Highlight("http://localhost:4000"))
 
 	ui.Newline()

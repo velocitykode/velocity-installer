@@ -12,6 +12,7 @@ import (
 var (
 	database string
 	cache    string
+	api      bool
 )
 
 var NewCmd = &cobra.Command{
@@ -28,6 +29,7 @@ var NewCmd = &cobra.Command{
 			ui.Muted("Flags:")
 			ui.Muted("  --database    Database driver (postgres, sqlite)")
 			ui.Muted("  --cache       Cache driver (redis, memory)")
+			ui.Muted("  --api         Create API-only project (no frontend)")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -42,6 +44,7 @@ var NewCmd = &cobra.Command{
 			Module:   projectName,
 			Database: database,
 			Cache:    cache,
+			API:      api,
 		}
 
 		if err := generator.CreateProject(config); err != nil {
@@ -64,11 +67,12 @@ var NewCmd = &cobra.Command{
 		ui.Newline()
 		ui.Info("Starting development servers")
 
-		generator.StartDevServers(projectName)
+		generator.StartDevServers(projectName, config.API)
 	},
 }
 
 func init() {
 	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, sqlite)")
 	NewCmd.Flags().StringVar(&cache, "cache", "memory", "Cache driver (redis, memory)")
+	NewCmd.Flags().BoolVar(&api, "api", false, "Create API-only project (no frontend)")
 }

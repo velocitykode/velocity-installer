@@ -1,0 +1,55 @@
+{
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "defaultMode": "acceptEdits",
+  "spinnerTipsEnabled": false,
+  "plansDirectory": ".claude/plans",
+  "permissions": {
+    "allow": [
+      "Bash(go test:*)",
+      "dash(go build:*)",
+      "Bash(go run:*)",
+      "Bash(go fmt:*)",
+      "Bash(go vet:*)",
+      "Bash(go mod:*)",
+      "Bash(go generate:*)",
+      "Bash(gofmt:*)",
+      "Bash(golangci-lint:*)",
+      "Bash(make:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "TodoWrite",
+      "Bash(go tool cover:*)",
+      "Bash(sort:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(xargs ls:*)",
+      "Bash(xargs -I {} bash -c \"head -20 {}\")",
+      "Bash(git -C /Users/ali/code/velocity show --stat HEAD)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "ExitPlanMode",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/archive_plan.py",
+            "timeout": 600
+          }
+        ]
+      }
+    ]
+  }
+}
+  }
+}
