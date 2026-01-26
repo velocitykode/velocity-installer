@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.0] - 2026-01-26
+
+### Added
+- add --api flag for API-only projects
+
+### Changed
+- style: fix gofmt formatting
+- test: add comprehensive test coverage for config, commands, generator, and detector packages
+
 ## [0.5.9] - 2026-01-09
 
 ### Changed
