@@ -149,10 +149,10 @@ func TestLoad(t *testing.T) {
 	defer os.Setenv("HOME", originalHome)
 
 	tests := []struct {
-		name       string
-		setupFunc  func(t *testing.T, tempDir string)
-		want       *Config
-		wantErr    bool
+		name        string
+		setupFunc   func(t *testing.T, tempDir string)
+		want        *Config
+		wantErr     bool
 		errContains string
 	}{
 		{
@@ -292,10 +292,10 @@ func TestConfig_Save(t *testing.T) {
 	defer os.Setenv("HOME", originalHome)
 
 	tests := []struct {
-		name       string
-		config     *Config
-		setupFunc  func(t *testing.T, tempDir string)
-		wantErr    bool
+		name        string
+		config      *Config
+		setupFunc   func(t *testing.T, tempDir string)
+		wantErr     bool
 		errContains string
 	}{
 		{

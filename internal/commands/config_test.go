@@ -436,25 +436,25 @@ func TestRunConfigGet(t *testing.T) {
 			wantOutput: "(not set)",
 		},
 		{
-			name:        "shows not set when database is empty",
-			args:        []string{"default.database"},
-			setupFunc:   func(t *testing.T, tempDir string) {},
-			wantErr:     false,
-			wantOutput:  "(not set)",
+			name:       "shows not set when database is empty",
+			args:       []string{"default.database"},
+			setupFunc:  func(t *testing.T, tempDir string) {},
+			wantErr:    false,
+			wantOutput: "(not set)",
 		},
 		{
-			name:        "shows not set when cache is empty",
-			args:        []string{"default.cache"},
-			setupFunc:   func(t *testing.T, tempDir string) {},
-			wantErr:     false,
-			wantOutput:  "(not set)",
+			name:       "shows not set when cache is empty",
+			args:       []string{"default.cache"},
+			setupFunc:  func(t *testing.T, tempDir string) {},
+			wantErr:    false,
+			wantOutput: "(not set)",
 		},
 		{
-			name:        "shows not set when queue is empty",
-			args:        []string{"default.queue"},
-			setupFunc:   func(t *testing.T, tempDir string) {},
-			wantErr:     false,
-			wantOutput:  "(not set)",
+			name:       "shows not set when queue is empty",
+			args:       []string{"default.queue"},
+			setupFunc:  func(t *testing.T, tempDir string) {},
+			wantErr:    false,
+			wantOutput: "(not set)",
 		},
 		{
 			name:        "returns error for unknown key",
@@ -720,10 +720,10 @@ func TestRunConfigReset(t *testing.T) {
 	}()
 
 	tests := []struct {
-		name       string
-		setupFunc  func(t *testing.T, tempDir string)
-		wantErr    bool
-		validate   func(t *testing.T, tempDir string)
+		name      string
+		setupFunc func(t *testing.T, tempDir string)
+		wantErr   bool
+		validate  func(t *testing.T, tempDir string)
 	}{
 		{
 			name: "deletes existing config file",

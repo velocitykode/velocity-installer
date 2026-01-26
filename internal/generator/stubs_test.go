@@ -247,10 +247,10 @@ func TestCopyStubFile(t *testing.T) {
 
 func TestGenerateFilesFromStubs(t *testing.T) {
 	tests := []struct {
-		name      string
-		config    ProjectConfig
-		wantErr   bool
-		validate  func(t *testing.T, config ProjectConfig)
+		name     string
+		config   ProjectConfig
+		wantErr  bool
+		validate func(t *testing.T, config ProjectConfig)
 	}{
 		{
 			name: "generates all required files for basic project",

@@ -12,10 +12,10 @@ import (
 
 func TestCopyFile(t *testing.T) {
 	tests := []struct {
-		name       string
-		setupFunc  func(t *testing.T, tempDir string) (src, dst string)
-		wantErr    bool
-		errContains string
+		name         string
+		setupFunc    func(t *testing.T, tempDir string) (src, dst string)
+		wantErr      bool
+		errContains  string
 		validateFunc func(t *testing.T, dst string)
 	}{
 		{
@@ -271,7 +271,7 @@ func TestCopyFile_PreservesContent(t *testing.T) {
 			content: []byte("Line 1\nLine 2\r\nLine 3\tTabbed\x00Null"),
 		},
 		{
-			name:    "preserves binary data",
+			name: "preserves binary data",
 			content: func() []byte {
 				data := make([]byte, 256)
 				for i := range data {

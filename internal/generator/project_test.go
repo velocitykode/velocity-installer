@@ -228,8 +228,8 @@ func TestValidateProjectName(t *testing.T) {
 			errMsg:  "project name contains invalid characters",
 		},
 		{
-			name:    "single dot returns error",
-			input:   ".",
+			name:  "single dot returns error",
+			input: ".",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				originalDir, _ := os.Getwd()
@@ -240,8 +240,8 @@ func TestValidateProjectName(t *testing.T) {
 			errMsg:  "directory . already exists",
 		},
 		{
-			name:    "double dot returns error",
-			input:   "..",
+			name:  "double dot returns error",
+			input: "..",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				originalDir, _ := os.Getwd()

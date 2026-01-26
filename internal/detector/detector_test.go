@@ -386,9 +386,9 @@ func TestIsVelocityProject_MarkerFiles(t *testing.T) {
 
 func TestHasVelocityModule(t *testing.T) {
 	tests := []struct {
-		name       string
+		name         string
 		goModContent string
-		want       bool
+		want         bool
 	}{
 		{
 			name: "detects velocity framework import",
@@ -420,9 +420,9 @@ require (
 			want: false,
 		},
 		{
-			name: "returns false when go.mod missing",
+			name:         "returns false when go.mod missing",
 			goModContent: "",
-			want: false,
+			want:         false,
 		},
 	}
 
