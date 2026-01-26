@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.1] - 2026-01-26
+
+### Changed
+- test: add coverage for --api flag
+
 ## [0.6.0] - 2026-01-26
 
 ### Added
