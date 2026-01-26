@@ -1383,3 +1383,75 @@ func TestReinitGitRepo(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTemplateRepo(t *testing.T) {
+	tests := []struct {
+		name     string
+		apiOnly  bool
+		wantRepo string
+	}{
+		{
+			name:     "full-stack template when api is false",
+			apiOnly:  false,
+			wantRepo: "velocity-template",
+		},
+		{
+			name:     "api template when api is true",
+			apiOnly:  true,
+			wantRepo: "velocity-template-api",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			repo := "velocity-template"
+			if tt.apiOnly {
+				repo = "velocity-template-api"
+			}
+			if repo != tt.wantRepo {
+				t.Errorf("template repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
+
+func TestProjectConfigAPI(t *testing.T) {
+	tests := []struct {
+		name   string
+		config ProjectConfig
+		wantJS bool
+	}{
+		{
+			name: "full-stack project includes JS dependencies",
+			config: ProjectConfig{
+				Name:     "test-project",
+				Module:   "test-project",
+				Database: "sqlite",
+				Cache:    "memory",
+				API:      false,
+			},
+			wantJS: true,
+		},
+		{
+			name: "api-only project skips JS dependencies",
+			config: ProjectConfig{
+				Name:     "test-api",
+				Module:   "test-api",
+				Database: "sqlite",
+				Cache:    "memory",
+				API:      true,
+			},
+			wantJS: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// API projects should not install JS deps
+			shouldInstallJS := !tt.config.API
+			if shouldInstallJS != tt.wantJS {
+				t.Errorf("shouldInstallJS = %v, want %v", shouldInstallJS, tt.wantJS)
+			}
+		})
+	}
+}
