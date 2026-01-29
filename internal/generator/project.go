@@ -17,7 +17,7 @@ import (
 )
 
 // Fallback version if GitHub API is unavailable
-const fallbackVelocityVersion = "v0.6.1"
+const fallbackVelocityVersion = "v0.6.2"
 
 // getLatestVelocityVersion fetches the latest release tag from GitHub
 func getLatestVelocityVersion() string {
@@ -442,7 +442,7 @@ func initGoModule(config ProjectConfig) error {
 		ui.Info("Using local Velocity framework")
 	} else {
 		// Try to get from GitHub (requires GOPRIVATE setup for private repos)
-		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@v0.6.1")
+		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@v0.6.2")
 		if err := cmd.Run(); err != nil {
 			ui.Warning("Note: Configure GOPRIVATE for private repo access")
 		}
