@@ -12,7 +12,7 @@ import (
 	"github.com/velocitykode/velocity-installer/internal/version"
 )
 
-var Version = "0.6.11"
+var Version = "0.6.12"
 
 func main() {
 	if err := version.CheckGoVersion(); err != nil {
