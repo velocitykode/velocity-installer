@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.22] - 2026-02-11
+
+### Changed
+- refactor: update stubs to use velocity.Default() DI pattern
+
 ## [0.6.21] - 2026-02-11
 
 ### Changed
