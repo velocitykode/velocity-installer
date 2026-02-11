@@ -3,11 +3,12 @@ package routes
 import (
 	"{{.Module}}/app/http/controllers"
 
+	"github.com/velocitykode/velocity"
 	"github.com/velocitykode/velocity/pkg/router"
 )
 
-func init() {
-	router.Register(func(r router.Router) {
-		r.Get("/", controllers.Home).Name("home")
-	})
+func Register(v *velocity.App) {
+	r := v.Router
+
+	r.Get("/", controllers.Home)
 }
