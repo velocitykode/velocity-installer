@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.23] - 2026-02-11
+
+### Fixed
+- require Go 1.25.7 to resolve crypto/tls vulnerability
+
 ## [0.6.22] - 2026-02-11
 
 ### Changed
