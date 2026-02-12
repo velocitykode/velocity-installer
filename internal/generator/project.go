@@ -747,12 +747,20 @@ func main() {
 		fmt.Printf("%%s .env file not found\n", warnSymbol)
 	}
 
-	if err := orm.InitFromEnv(); err != nil {
+	manager, err := orm.NewManager(orm.ManagerConfig{
+		Driver:   os.Getenv("DB_CONNECTION"),
+		Host:     os.Getenv("DB_HOST"),
+		Port:     os.Getenv("DB_PORT"),
+		Database: os.Getenv("DB_DATABASE"),
+		Username: os.Getenv("DB_USERNAME"),
+		Password: os.Getenv("DB_PASSWORD"),
+	})
+	if err != nil {
 		fmt.Printf("%%s Failed to initialize database: %%v\n", crossSymbol, err)
 		os.Exit(1)
 	}
 
-	driver := orm.DB()
+	driver := manager.DB()
 	if driver == nil {
 		fmt.Printf("%%s Database driver not initialized\n", crossSymbol)
 		os.Exit(1)
