@@ -580,7 +580,8 @@ func generateCryptoKey() (string, error) {
 	return base64.StdEncoding.EncodeToString(key), nil
 }
 
-// createDefaultMigrations creates the 3 default migration files
+// createDefaultMigrations creates default migration files only if the template
+// didn't already provide them.
 func createDefaultMigrations(projectPath string) error {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
@@ -588,6 +589,12 @@ func createDefaultMigrations(projectPath string) error {
 	}
 
 	migrationsDir := filepath.Join(absPath, "database", "migrations")
+
+	// Skip if the template already has migration files
+	if entries, err := filepath.Glob(filepath.Join(migrationsDir, "*.go")); err == nil && len(entries) > 0 {
+		return nil
+	}
+
 	if err := os.MkdirAll(migrationsDir, 0755); err != nil {
 		return err
 	}
