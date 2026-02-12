@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.34] - 2026-02-12
+
+### Fixed
+- skip default migrations when template already provides them
+
 ## [0.6.33] - 2026-02-12
 
 ### Changed
