@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.39] - 2026-02-14
+
+### Changed
+- chore: update velocity framework to v0.10.2
+
 ## [0.6.38] - 2026-02-14
 
 ### Changed
