@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.40] - 2026-02-14
+
+### Changed
+- refactor: update import paths after velocity pkg/ promotion
+
 ## [0.6.39] - 2026-02-14
 
 ### Changed
