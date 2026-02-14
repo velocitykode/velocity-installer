@@ -602,7 +602,7 @@ func createDefaultMigrations(projectPath string) error {
 	// Migration 1: Create users table
 	usersTable := `package migrations
 
-import "github.com/velocitykode/velocity/pkg/orm/migrate"
+import "github.com/velocitykode/velocity/orm/migrate"
 
 func init() {
 	migrate.Register(&migrate.Migration{
@@ -628,7 +628,7 @@ func init() {
 	// Migration 2: Create cache table
 	cacheTable := `package migrations
 
-import "github.com/velocitykode/velocity/pkg/orm/migrate"
+import "github.com/velocitykode/velocity/orm/migrate"
 
 func init() {
 	migrate.Register(&migrate.Migration{
@@ -651,7 +651,7 @@ func init() {
 	// Migration 3: Create jobs table
 	jobsTable := `package migrations
 
-import "github.com/velocitykode/velocity/pkg/orm/migrate"
+import "github.com/velocitykode/velocity/orm/migrate"
 
 func init() {
 	migrate.Register(&migrate.Migration{
@@ -738,8 +738,8 @@ import (
 
 	_ "%s/database/migrations"
 	"github.com/joho/godotenv"
-	"github.com/velocitykode/velocity/pkg/orm"
-	"github.com/velocitykode/velocity/pkg/orm/migrate"
+	"github.com/velocitykode/velocity/orm"
+	"github.com/velocitykode/velocity/orm/migrate"
 )
 
 const (

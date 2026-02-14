@@ -7,7 +7,7 @@ import (
 	"{{.Module}}/app/http/middleware"
 
 	"github.com/velocitykode/velocity"
-	"github.com/velocitykode/velocity/pkg/router"
+	"github.com/velocitykode/velocity/router"
 )
 
 func RegisterAPI(v *velocity.App) {
