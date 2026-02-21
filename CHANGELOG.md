@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.48] - 2026-02-21
+
+### Changed
+- chore: add workflow_dispatch trigger to auto-release
+
 ## [0.6.47] - 2026-02-19
 
 ### Changed
