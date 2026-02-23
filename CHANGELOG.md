@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.6.49] - 2026-02-23
+
+### Changed
+- Update docs link to velocity.velocitykode.com/docs
+
 ## [0.6.48] - 2026-02-21
 
 ### Changed
