@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/spf13/cobra"
 	"github.com/velocitykode/velocity-installer/internal/generator"
@@ -50,6 +51,17 @@ var NewCmd = &cobra.Command{
 			ui.Newline()
 			ui.Error(err.Error())
 			return
+		}
+
+		// Build vel binary
+		ui.Step("Building vel...")
+		buildCmd := exec.Command("go", "build", "-o", "vel", ".")
+		buildCmd.Dir = projectName
+		if err := buildCmd.Run(); err != nil {
+			ui.Warning("Failed to build vel: " + err.Error())
+			ui.Muted("Run manually: go build -o vel .")
+		} else {
+			ui.Success("Built ./vel")
 		}
 
 		ui.Newline()
