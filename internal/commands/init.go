@@ -100,17 +100,6 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to initialize: %w", err)
 	}
 
-	// Build vel binary
-	ui.Step("Building project CLI...")
-	buildCmd := exec.Command("go", "build", "-o", "vel", "./cmd/vel")
-	buildCmd.Dir = cwd
-	if err := buildCmd.Run(); err != nil {
-		ui.Warning("Failed to build vel: " + err.Error())
-		ui.Muted("Run manually: go build -o vel ./cmd/vel")
-	} else {
-		ui.Success("Built ./vel")
-	}
-
 	// Success message
 	ui.Newline()
 	ui.Success("Velocity initialized successfully!")
