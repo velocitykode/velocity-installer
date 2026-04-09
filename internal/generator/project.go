@@ -386,7 +386,6 @@ func createDirectoryStructure(projectPath string) error {
 		"app/http/middleware",
 		"app/models",
 		"bootstrap",
-		"cmd/vel",
 		"config",
 		"database/migrations",
 		"database/factories",
@@ -708,139 +707,19 @@ func init() {
 	return nil
 }
 
-// runMigrations runs migrations directly without subprocess
+// runMigrations runs migrations using the app's built-in migrate command.
 func runMigrations(projectPath string) error {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
 		return err
 	}
 
-	originalDir, _ := os.Getwd()
-	os.Chdir(absPath)
-	defer os.Chdir(originalDir)
+	cmd := exec.Command("go", "run", ".", "migrate")
+	cmd.Dir = absPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 
-	// Create temporary migration runner script
-	tmpDir := ".vel/tmp"
-	os.MkdirAll(tmpDir, 0755)
-
-	// Get module name
-	moduleName, err := getProjectModuleName()
-	if err != nil {
-		return err
-	}
-
-	script := fmt.Sprintf(`
-package main
-
-import (
-	"fmt"
-	"os"
-
-	_ "%s/database/migrations"
-	"github.com/joho/godotenv"
-	"github.com/velocitykode/velocity/orm"
-	"github.com/velocitykode/velocity/orm/migrate"
-)
-
-const (
-	// ANSI symbols (matching CLI style)
-	checkSymbol = "\033[32m✓\033[0m"   // green checkmark
-	warnSymbol  = "\033[33m!\033[0m"   // yellow warning
-	crossSymbol = "\033[31m✗\033[0m"   // red cross
-)
-
-func main() {
-	if err := godotenv.Load(); err != nil {
-		fmt.Printf("%%s .env file not found\n", warnSymbol)
-	}
-
-	manager, err := orm.NewManager(orm.ManagerConfig{
-		Driver:   os.Getenv("DB_CONNECTION"),
-		Host:     os.Getenv("DB_HOST"),
-		Port:     os.Getenv("DB_PORT"),
-		Database: os.Getenv("DB_DATABASE"),
-		Username: os.Getenv("DB_USERNAME"),
-		Password: os.Getenv("DB_PASSWORD"),
-	})
-	if err != nil {
-		fmt.Printf("%%s Failed to initialize database: %%v\n", crossSymbol, err)
-		os.Exit(1)
-	}
-
-	driver := manager.DB()
-	if driver == nil {
-		fmt.Printf("%%s Database driver not initialized\n", crossSymbol)
-		os.Exit(1)
-	}
-
-	driverName := os.Getenv("DB_CONNECTION")
-	migrator := migrate.NewMigrator(driver, driverName)
-
-	registry := migrate.All()
-
-	appliedVersions := make(map[string]bool)
-	rows, err := driver.Query("SELECT version FROM migrations")
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var version string
-			if err := rows.Scan(&version); err == nil {
-				appliedVersions[version] = true
-			}
-		}
-	}
-
-	pending := []migrate.Migration{}
-	for _, m := range registry {
-		if !appliedVersions[m.Version] {
-			pending = append(pending, m)
-		}
-	}
-
-	if len(pending) == 0 {
-		os.Exit(0)
-	}
-
-	if err := migrator.Up(); err != nil {
-		fmt.Printf("%%s Migration failed: %%v\n", crossSymbol, err)
-		os.Exit(1)
-	}
-
-	for _, m := range pending {
-		fmt.Printf("%%s \033[32;1m%%s_%%s\033[0m\n", checkSymbol, m.Version, m.Description)
-	}
-}
-`, moduleName)
-
-	tmpFile := fmt.Sprintf("%s/migrate_runner.go", tmpDir)
-	if err := os.WriteFile(tmpFile, []byte(script), 0644); err != nil {
-		return err
-	}
-	defer os.Remove(tmpFile)
-
-	// Run with go run (uses module mode)
-	runCmd := exec.Command("go", "run", tmpFile)
-	runCmd.Stdout = os.Stdout
-	runCmd.Stderr = os.Stderr
-
-	return runCmd.Run()
-}
-
-func getProjectModuleName() (string, error) {
-	data, err := os.ReadFile("go.mod")
-	if err != nil {
-		return "", err
-	}
-
-	lines := strings.Split(string(data), "\n")
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "module ") {
-			return strings.TrimPrefix(line, "module "), nil
-		}
-	}
-
-	return "", fmt.Errorf("module name not found in go.mod")
+	return cmd.Run()
 }
 
 // StartDevServers starts npm run dev and go run main.go in background
