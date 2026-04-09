@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.0] - 2026-04-09
+
+### Added
+- remove cmd/vel scaffolding, simplify migration runner
+
 ## [0.6.50] - 2026-04-08
 
 ### Changed
