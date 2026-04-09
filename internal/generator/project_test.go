@@ -598,7 +598,6 @@ func TestCreateDirectoryStructure(t *testing.T) {
 					"app/http/middleware",
 					"app/models",
 					"bootstrap",
-					"cmd/vel",
 					"config",
 					"database/migrations",
 					"database/factories",

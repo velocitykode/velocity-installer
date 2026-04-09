@@ -761,9 +761,9 @@ func StartDevServers(projectPath string, apiOnly bool) {
 	ui.Success("Build something great!")
 	ui.Newline()
 
-	// Show tip about vel shell function
-	ui.Muted("Tip: Run this once to use 'vel' instead of './vel':")
-	ui.Muted(`  grep -q "vel()" ~/.zshrc || echo 'vel() { [ -x ./vel ] && ./vel "$@" || echo "vel: not found"; }' >> ~/.zshrc && source ~/.zshrc`)
+	// Show tip about building vel
+	ui.Muted("Tip: Build the CLI with: go build -o vel .")
+	ui.Muted("Then use: vel serve, vel migrate, vel route:list, vel make:handler")
 	ui.Newline()
 }
 

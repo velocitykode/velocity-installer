@@ -53,17 +53,6 @@ var NewCmd = &cobra.Command{
 			return
 		}
 
-		// Build vel binary
-		ui.Step("Building project CLI...")
-		buildCmd := exec.Command("go", "build", "-o", "vel", "./cmd/vel")
-		buildCmd.Dir = projectName
-		if err := buildCmd.Run(); err != nil {
-			ui.Warning("Failed to build vel: " + err.Error())
-			ui.Muted("Run manually: go build -o vel ./cmd/vel")
-		} else {
-			ui.Success("Built ./vel")
-		}
-
 		ui.Newline()
 		ui.Info("Starting development servers")
 
