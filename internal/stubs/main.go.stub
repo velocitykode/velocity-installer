@@ -21,7 +21,7 @@ func main() {
 
 	routes.Register(v)
 
-	if err := v.Serve(); err != nil {
+	if err := v.Run(); err != nil {
 		log.Fatal(err)
 	}
 }
