@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.7.1] - 2026-04-09
+
+### Fixed
+- remove vel binary build step, update tips for baked-in CLI
+
 ## [0.7.0] - 2026-04-09
 
 ### Added
