@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.8.0] - 2026-04-09
+
+### Added
+- build vel binary after scaffolding
+
 ## [0.7.2] - 2026-04-09
 
 ### Fixed
