@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/velocitykode/velocity-installer/internal/generator"
-	"github.com/velocitykode/velocity-installer/internal/ui"
+	cli "github.com/velocitykode/velocity-cli"
 )
 
 var (
@@ -23,22 +23,22 @@ var NewCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			ui.Error("Project name is required")
-			ui.Newline()
-			ui.Muted("Usage: velocity new [project-name]")
-			ui.Newline()
-			ui.Muted("Flags:")
-			ui.Muted("  --database    Database driver (postgres, sqlite)")
-			ui.Muted("  --cache       Cache driver (redis, memory)")
-			ui.Muted("  --api         Create API-only project (no frontend)")
-			ui.Muted("  --ssr         Enable Inertia server-side rendering")
+			cli.Error("Project name is required")
+			cli.Newline()
+			cli.Muted("Usage: velocity new [project-name]")
+			cli.Newline()
+			cli.Muted("Flags:")
+			cli.Muted("  --database    Database driver (postgres, sqlite)")
+			cli.Muted("  --cache       Cache driver (redis, memory)")
+			cli.Muted("  --api         Create API-only project (no frontend)")
+			cli.Muted("  --ssr         Enable Inertia server-side rendering")
 			return fmt.Errorf("")
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		projectName := args[0]
-		ui.Header("velocity new")
+		cli.Header("velocity new")
 
 		// Create project with flags (defaults to sqlite if not specified)
 		config := generator.ProjectConfig{
@@ -51,24 +51,24 @@ var NewCmd = &cobra.Command{
 		}
 
 		if err := generator.CreateProject(config); err != nil {
-			ui.Newline()
-			ui.Error(err.Error())
+			cli.Newline()
+			cli.Error(err.Error())
 			return
 		}
 
 		// Build vel binary
-		ui.Step("Building vel...")
+		cli.Step("Building vel...")
 		buildCmd := exec.Command("go", "build", "-o", "vel", ".")
 		buildCmd.Dir = projectName
 		if err := buildCmd.Run(); err != nil {
-			ui.Warning("Failed to build vel: " + err.Error())
-			ui.Muted("Run manually: go build -o vel .")
+			cli.Warning("Failed to build vel: " + err.Error())
+			cli.Muted("Run manually: go build -o vel .")
 		} else {
-			ui.Success("Built ./vel")
+			cli.Success("Built ./vel")
 		}
 
-		ui.Newline()
-		ui.Info("Starting development servers")
+		cli.Newline()
+		cli.Info("Starting development servers")
 
 		generator.StartDevServers(projectName, config.API)
 	},

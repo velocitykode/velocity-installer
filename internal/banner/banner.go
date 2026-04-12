@@ -1,28 +1,24 @@
 package banner
 
 import (
-	"github.com/velocitykode/velocity-installer/internal/colors"
+	cli "github.com/velocitykode/velocity-cli"
 )
 
 // Simple returns a simple ASCII banner
 func Simple() string {
-	style := colors.BrandStyle
-	return style.Render(`
+	return cli.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
-██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝ 
-╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝  
- ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║   
-  ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝   
+██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝
+╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝
+ ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║
+  ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝
 `)
 }
 
 // Block returns a blocky ASCII banner
 func Block() string {
-	primary := colors.BrandStyle
-	accent := colors.BrandHoverStyle
-
-	banner := primary.Render(`
+	return cli.StylePrimary(`
 █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
 █                                                        █
 █  ██    ██ ███████ ██       ██████   ██████ ██ ████████▄█
@@ -32,17 +28,13 @@ func Block() string {
 █    ████   ███████ ███████  ██████   ██████ ██    ██    █
 █                                                        █
 █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
-`) + accent.Render(`
+`) + cli.StylePrimary(`
       The Go Web Framework for Rapid Development`)
-
-	return banner
 }
 
 // CompactBox returns a compact boxed ASCII banner
 func CompactBox() string {
-	style := colors.BrandStyle
-
-	return style.Render(`
+	return cli.StylePrimary(`
 ╔══════════════════════════════════════╗
 ║  ▌ ▌▛▀▌▌  ▞▀▖▞▀▖▀▛▘▀▛▘▌ ▌          ║
 ║  ▚▞ ▙▄ ▌  ▌ ▌▌  ▌▌  ▌ ▝▞           ║
@@ -52,8 +44,7 @@ func CompactBox() string {
 
 // Retro returns a retro-style ASCII banner
 func Retro() string {
-	style := colors.BrandStyle
-	return style.Render(`
+	return cli.StylePrimary(`
  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
  ██                                                         ██
  ██  ██    ██ ████████ ██       ███████  ███████ ████ ███████
@@ -67,14 +58,11 @@ func Retro() string {
 
 // Shadow returns a shadow-style ASCII banner
 func Shadow() string {
-	primary := colors.BrandStyle
-	shadow := colors.MutedStyle
-
-	return primary.Render(`
+	return cli.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
-██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝ 
-╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝  
+██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝
+╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝
  ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║   `) + "\n" +
-		shadow.Render(` ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝   `)
+		cli.StyleMuted(` ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝   `)
 }
