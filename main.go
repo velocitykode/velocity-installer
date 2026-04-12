@@ -9,7 +9,6 @@ import (
 
 	"github.com/spf13/cobra"
 	cli "github.com/velocitykode/velocity-cli"
-	"github.com/velocitykode/velocity-installer/internal/banner"
 	"github.com/velocitykode/velocity-installer/internal/commands"
 	"github.com/velocitykode/velocity-installer/internal/version"
 )
@@ -34,10 +33,7 @@ func main() {
 		Short:   "Velocity installer - create and manage Velocity projects",
 		Version: Version,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println(banner.Simple())
-			fmt.Println(cli.StyleMuted("       The Official CLI for Velocity Web Framework"))
-			fmt.Println()
-			cmd.Help()
+			commands.RenderHome(cmd)
 		},
 	}
 

@@ -79,23 +79,28 @@ func ensureDatabaseReady(projectPath string) (ready bool, err error) {
 		return true, nil
 	}
 
+	labels := map[string]string{"postgres": "Postgres", "mysql": "MySQL"}
+	label := labels[env.Connection]
+	if label == "" {
+		label = env.Connection
+	}
 	target := net.JoinHostPort(env.Host, env.Port)
-	cli.Info(fmt.Sprintf("Checking %s server at %s", env.Connection, target))
+
+	cli.Info(fmt.Sprintf("Checking %s server at %s", label, target))
 	conn, dialErr := net.DialTimeout("tcp", target, 3*time.Second)
 	if dialErr != nil {
-		cli.Warning(fmt.Sprintf("%s not reachable at %s", env.Connection, target))
-		cli.Muted(fmt.Sprintf("Start %s, create database '%s', then run: cd %s && go run . migrate",
-			env.Connection, env.Database, projectPath))
+		cli.Warning(fmt.Sprintf("%s not reachable at %s", label, target))
+		cli.Muted(fmt.Sprintf("Start %s, then run: cd %s && ./vel migrate", label, projectPath))
 		return false, nil
 	}
 	_ = conn.Close()
-	cli.Success(fmt.Sprintf("%s server reachable", env.Connection))
+	cli.Success(fmt.Sprintf("%s server reachable", label))
 
 	cli.Info(fmt.Sprintf("Creating database %s", env.Database))
 	created, createErr := createDatabase(env)
 	if createErr != nil {
 		cli.Warning(fmt.Sprintf("Could not create database %s: %s", env.Database, createErr))
-		cli.Muted(fmt.Sprintf("Create it manually, then run: cd %s && go run . migrate", projectPath))
+		cli.Muted(fmt.Sprintf("Create it manually, then run: cd %s && ./vel migrate", projectPath))
 		return false, nil
 	}
 	if created {
