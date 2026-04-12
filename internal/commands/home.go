@@ -15,7 +15,7 @@ import (
 // to cobra's plain-text help.
 func RenderHome(root *cobra.Command) {
 	fmt.Println(banner.Simple())
-	fmt.Println(cli.StyleMuted("       The Official CLI for Velocity Web Framework"))
+	fmt.Println(cli.StyleMuted("       The Official Installer for Velocity Web Framework"))
 	cli.Newline()
 
 	section("USAGE")

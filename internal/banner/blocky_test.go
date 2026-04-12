@@ -19,7 +19,7 @@ func TestBlockyFunctions(t *testing.T) {
 		{
 			name:     "MediumBlocky",
 			function: MediumBlocky,
-			contains: []string{"██", "The Official CLI for Velocity Web Framework"},
+			contains: []string{"██", "The Official Installer for Velocity Web Framework"},
 		},
 		{
 			name:     "CompactBlocky",
