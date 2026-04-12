@@ -5,8 +5,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	"github.com/velocitykode/velocity-installer/internal/config"
 	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/velocity-installer/internal/config"
 )
 
 var ConfigCmd = &cobra.Command{

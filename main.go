@@ -16,7 +16,7 @@ import (
 
 var Version = "0.10.0"
 
-//go:embed velocity-cli.toml
+//go:embed cli-theme.toml
 var themeConfig []byte
 
 func main() {

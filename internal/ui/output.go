@@ -37,4 +37,3 @@ func ClearLines(n int) {
 		fmt.Print("\033[A\033[K")
 	}
 }
-

@@ -5,8 +5,8 @@ import (
 	"os/exec"
 
 	"github.com/spf13/cobra"
-	"github.com/velocitykode/velocity-installer/internal/generator"
 	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/velocity-installer/internal/generator"
 )
 
 var (
