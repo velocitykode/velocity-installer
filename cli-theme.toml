@@ -1,0 +1,16 @@
+# velocity-cli theme config for the Velocity installer.
+# Loaded at startup by main.go via cli.LoadConfig. Edit freely —
+# missing fields fall back to SDK defaults.
+
+[colors]
+primary = "#0e87cd"
+success = "#10b981"
+warning = "#f59e0b"
+error   = "#ef4444"
+muted   = "#6b7280"
+
+[symbols]
+arrow = "→"
+check = "✓"
+warn  = "!"
+cross = "✗"
