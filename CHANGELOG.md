@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.0] - 2026-04-12
+
+### Added
+- preflight database + drop air dependency
+
 ## [0.10.2] - 2026-04-12
 
 ### Changed
