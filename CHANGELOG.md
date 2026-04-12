@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.0] - 2026-04-12
+
+### Added
+- prompt for database and SSR in `velocity new`
+
 ## [0.9.1] - 2026-04-12
 
 ### Changed
