@@ -40,7 +40,18 @@ var NewCmd = &cobra.Command{
 		projectName := args[0]
 		cli.Header("velocity new")
 
-		// Create project with flags (defaults to sqlite if not specified)
+		if !cmd.Flags().Changed("database") {
+			database = cli.Select(
+				"Database:",
+				[]string{"sqlite", "postgres"},
+				cli.WithSelectDefault(database),
+			)
+		}
+
+		if !api && !cmd.Flags().Changed("ssr") {
+			ssr = cli.Confirm("Enable Inertia server-side rendering?", cli.WithDefaultNo())
+		}
+
 		config := generator.ProjectConfig{
 			Name:     projectName,
 			Module:   projectName,
