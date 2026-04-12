@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.11.1] - 2026-04-12
+
+### Changed
+- chore: bump go to 1.26.2 (stdlib crypto/x509 CVE)
+
 ## [0.11.0] - 2026-04-12
 
 ### Added
