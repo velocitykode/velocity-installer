@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -126,16 +127,32 @@ func CreateProject(config ProjectConfig) error {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
 
-	// Run migrations
+	// Preflight the database so migrations don't fail with a wall of driver
+	// errors when the server isn't running or the database hasn't been created.
 	cli.Newline()
+	ready, err := ensureDatabaseReady(config.Name)
+	if err != nil {
+		return fmt.Errorf("failed to prepare database: %w", err)
+	}
+	if !ready {
+		// Preflight already printed a user-facing message. Installation is
+		// otherwise complete — the caller decides whether to auto-start.
+		return ErrMigrationsSkipped
+	}
+
 	cli.Info("Running migrations...")
 	if err := runMigrations(config.Name); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
-	cli.Success("Database ready")
+	cli.Success("Migrations complete")
 
 	return nil
 }
+
+// ErrMigrationsSkipped signals that project scaffolding succeeded but the
+// database preflight chose to skip migrations (e.g. the DB server wasn't
+// reachable). Callers should treat this as a non-fatal outcome.
+var ErrMigrationsSkipped = errors.New("migrations skipped: database not ready")
 
 // cloneTemplate clones the appropriate velocity template
 func cloneTemplate(projectName string, apiOnly bool) error {
@@ -266,42 +283,27 @@ func installDependencies(projectPath string, apiOnly bool) error {
 
 	goStatus := &depStatus{name: "Go dependencies", status: "downloading..."}
 	jsStatus := &depStatus{name: "JS dependencies", status: "downloading..."}
-	airStatus := &depStatus{name: "Air (hot reload)", status: "checking..."}
 
-	// Check if air is already installed
-	airInstalled := isAirInstalled()
-
-	// Print initial tree (skip JS for API-only projects)
+	// Print initial tree (skip JS for API-only projects). Hot reload now ships
+	// inside the vel binary via `./vel serve`, so no external watcher install.
 	printDepTree := func() {
 		if apiOnly {
-			ui.TreeItem("├─", goStatus.name, goStatus.status, goStatus.done)
-			if airInstalled {
-				ui.TreeItemSkipped("└─", airStatus.name, "already installed")
-			} else {
-				ui.TreeItem("└─", airStatus.name, airStatus.status, airStatus.done)
-			}
+			ui.TreeItem("└─", goStatus.name, goStatus.status, goStatus.done)
 		} else {
 			ui.TreeItem("├─", goStatus.name, goStatus.status, goStatus.done)
-			ui.TreeItem("├─", jsStatus.name, jsStatus.status, jsStatus.done)
-			if airInstalled {
-				ui.TreeItemSkipped("└─", airStatus.name, "already installed")
-			} else {
-				ui.TreeItem("└─", airStatus.name, airStatus.status, airStatus.done)
-			}
+			ui.TreeItem("└─", jsStatus.name, jsStatus.status, jsStatus.done)
 		}
 	}
 
 	printDepTree()
 
-	// Determine number of tasks
-	numTasks := 3
-	linesToClear := 3
+	numTasks := 2
+	linesToClear := 2
 	if apiOnly {
-		numTasks = 2
-		linesToClear = 2
+		numTasks = 1
+		linesToClear = 1
 	}
 
-	// Run deps in parallel
 	done := make(chan bool, numTasks)
 
 	// Go dependencies
@@ -333,27 +335,15 @@ func installDependencies(projectPath string, apiOnly bool) error {
 		}()
 	}
 
-	// Air installation (only if not already installed)
-	go func() {
-		if !airInstalled {
-			exec.Command("go", "install", "github.com/air-verse/air@latest").Run()
-			airStatus.status = "done"
-			airStatus.done = true
-		}
-		done <- true
-	}()
-
 	// Wait for all to complete, updating display
 	completed := 0
 	for completed < numTasks {
 		<-done
 		completed++
-		// Clear and redraw tree
 		ui.ClearLines(linesToClear)
 		printDepTree()
 	}
 
-	// Return first error encountered
 	if goStatus.err != nil {
 		return goStatus.err
 	}
@@ -362,12 +352,6 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	}
 
 	return nil
-}
-
-// isAirInstalled checks if air binary is available
-func isAirInstalled() bool {
-	_, err := exec.LookPath("air")
-	return err == nil
 }
 
 func validateProjectName(name string) error {
@@ -755,7 +739,8 @@ func runMigrations(projectPath string) error {
 	return cmd.Run()
 }
 
-// StartDevServers starts npm run dev and go run main.go in background
+// StartDevServers launches `./vel serve`, which handles hot reload and Vite
+// itself (no separate air/npm processes needed).
 func StartDevServers(projectPath string, apiOnly bool) {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
@@ -763,23 +748,11 @@ func StartDevServers(projectPath string, apiOnly bool) {
 		return
 	}
 
-	// Start npm run dev in background (detached) - skip for API-only projects
-	if !apiOnly {
-		npmCmd := exec.Command("npm", "run", "dev")
-		npmCmd.Dir = absPath
-		npmCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-		if err := npmCmd.Start(); err != nil {
-			cli.Error(fmt.Sprintf("Failed to start npm: %v", err))
-			return
-		}
-	}
-
-	// Start air for hot reloading (detached)
-	goCmd := exec.Command("air")
-	goCmd.Dir = absPath
-	goCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	if err := goCmd.Start(); err != nil {
-		cli.Error(fmt.Sprintf("Failed to start Go server: %v", err))
+	serveCmd := exec.Command("./vel", "serve")
+	serveCmd.Dir = absPath
+	serveCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := serveCmd.Start(); err != nil {
+		cli.Error(fmt.Sprintf("Failed to start dev server: %v", err))
 		return
 	}
 
@@ -794,9 +767,7 @@ func StartDevServers(projectPath string, apiOnly bool) {
 	cli.Success("Build something great!")
 	cli.Newline()
 
-	// Show tip about building vel
-	cli.Muted("Tip: Build the CLI with: go build -o vel .")
-	cli.Muted("Then use: vel serve, vel migrate, vel route:list, vel make:handler")
+	cli.Muted("Tip: ./vel serve, ./vel migrate, ./vel route:list, ./vel make:handler")
 	cli.Newline()
 }
 

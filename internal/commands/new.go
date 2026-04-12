@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"os/exec"
 
@@ -61,10 +62,15 @@ var NewCmd = &cobra.Command{
 			SSR:      ssr,
 		}
 
+		migrationsSkipped := false
 		if err := generator.CreateProject(config); err != nil {
-			cli.Newline()
-			cli.Error(err.Error())
-			return
+			if errors.Is(err, generator.ErrMigrationsSkipped) {
+				migrationsSkipped = true
+			} else {
+				cli.Newline()
+				cli.Error(err.Error())
+				return
+			}
 		}
 
 		// Build vel binary
@@ -79,8 +85,21 @@ var NewCmd = &cobra.Command{
 		}
 
 		cli.Newline()
-		cli.Info("Starting development servers")
 
+		if migrationsSkipped {
+			// Launching the dev server now would just spew DB connection
+			// errors. Hand control back to the user with concrete next steps.
+			cli.Info("Project ready — database setup pending")
+			cli.NextSteps([]string{
+				"Start your database server",
+				fmt.Sprintf("cd %s", projectName),
+				"./vel migrate",
+				"./vel serve",
+			})
+			return
+		}
+
+		cli.Info("Starting development servers")
 		generator.StartDevServers(projectName, config.API)
 	},
 }
