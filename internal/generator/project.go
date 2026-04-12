@@ -164,30 +164,31 @@ func replaceModuleName(projectPath, moduleName string) error {
 		return fmt.Errorf("abs path: %w", err)
 	}
 
-	// Use find and sed to replace in all Go files
+	// Portable in-place edits: `sed PATTERN file > tmp && mv tmp file`.
+	// Works identically on GNU (Linux) and BSD (macOS) sed without -i quirks.
 	cmd := exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && find . -name '*.go' -type f -exec sed -i '' 's|{{MODULE_NAME}}|%s|g' {} +", absPath, moduleName))
+		fmt.Sprintf(`cd '%s' && find . -name '*.go' -type f -exec sh -c 'sed "s|{{MODULE_NAME}}|%s|g" "$1" > "$1.tmp" && mv "$1.tmp" "$1"' _ {} \;`, absPath, moduleName))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("replace go files: %w: %s", err, string(output))
 	}
 
 	// Replace in go.mod (if exists)
 	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && [ -f go.mod ] && sed -i '' 's|{{MODULE_NAME}}|%s|g' go.mod || true", absPath, moduleName))
+		fmt.Sprintf("cd '%s' && [ -f go.mod ] && sed 's|{{MODULE_NAME}}|%s|g' go.mod > go.mod.tmp && mv go.mod.tmp go.mod || true", absPath, moduleName))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("replace go.mod: %w: %s", err, string(output))
 	}
 
 	// Replace in package.json (if exists)
 	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && [ -f package.json ] && sed -i '' 's|{{MODULE_NAME}}|%s|g' package.json || true", absPath, moduleName))
+		fmt.Sprintf("cd '%s' && [ -f package.json ] && sed 's|{{MODULE_NAME}}|%s|g' package.json > package.json.tmp && mv package.json.tmp package.json || true", absPath, moduleName))
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("replace package.json: %w: %s", err, string(output))
 	}
 
 	// Replace in package-lock.json (if exists)
 	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && [ -f package-lock.json ] && sed -i '' 's|{{MODULE_NAME}}|%s|g' package-lock.json || true", absPath, moduleName))
+		fmt.Sprintf("cd '%s' && [ -f package-lock.json ] && sed 's|{{MODULE_NAME}}|%s|g' package-lock.json > package-lock.json.tmp && mv package-lock.json.tmp package-lock.json || true", absPath, moduleName))
 	cmd.Run() // Ignore error - file may not exist
 
 	// Only process go.mod if it exists
@@ -195,7 +196,7 @@ func replaceModuleName(projectPath, moduleName string) error {
 	if _, err := os.Stat(goModPath); err == nil {
 		// Remove replace directive
 		cmd = exec.Command("sh", "-c",
-			fmt.Sprintf("cd '%s' && sed -i '' '/^replace github.com\\/velocitykode\\/velocity/d' go.mod", absPath))
+			fmt.Sprintf("cd '%s' && sed '/^replace github.com\\/velocitykode\\/velocity/d' go.mod > go.mod.tmp && mv go.mod.tmp go.mod", absPath))
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -540,9 +541,9 @@ func createEnvFiles(config ProjectConfig) error {
 		return err
 	}
 
-	// Replace crypto key in .env using sed
+	// Replace crypto key in .env
 	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && sed -i '' 's|^CRYPTO_KEY=.*|CRYPTO_KEY=base64:%s|' .env", absPath, newKey))
+		fmt.Sprintf("cd '%s' && sed 's|^CRYPTO_KEY=.*|CRYPTO_KEY=base64:%s|' .env > .env.tmp && mv .env.tmp .env", absPath, newKey))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -557,7 +558,7 @@ func createEnvFiles(config ProjectConfig) error {
 
 		// Update DB_CONNECTION, DB_PORT, DB_DATABASE, DB_USERNAME
 		sedCmds := fmt.Sprintf(
-			"sed -i '' 's|^DB_CONNECTION=.*|DB_CONNECTION=%s|; s|^DB_PORT=.*|DB_PORT=%s|; s|^DB_DATABASE=.*|DB_DATABASE=%s|; s|^DB_USERNAME=.*|DB_USERNAME=%s|' .env",
+			"sed 's|^DB_CONNECTION=.*|DB_CONNECTION=%s|; s|^DB_PORT=.*|DB_PORT=%s|; s|^DB_DATABASE=.*|DB_DATABASE=%s|; s|^DB_USERNAME=.*|DB_USERNAME=%s|' .env > .env.tmp && mv .env.tmp .env",
 			config.Database, ports[config.Database], dbName, username)
 		cmd = exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && %s", absPath, sedCmds))
 		if err := cmd.Run(); err != nil {
@@ -568,7 +569,7 @@ func createEnvFiles(config ProjectConfig) error {
 	// Update CACHE_DRIVER based on config
 	if config.Cache != "" && config.Cache != "memory" {
 		cmd = exec.Command("sh", "-c",
-			fmt.Sprintf("cd '%s' && sed -i '' 's|^CACHE_DRIVER=.*|CACHE_DRIVER=%s|' .env", absPath, config.Cache))
+			fmt.Sprintf("cd '%s' && sed 's|^CACHE_DRIVER=.*|CACHE_DRIVER=%s|' .env > .env.tmp && mv .env.tmp .env", absPath, config.Cache))
 		if err := cmd.Run(); err != nil {
 			return err
 		}
@@ -593,7 +594,7 @@ func applySSROption(config ProjectConfig, absPath string) error {
 	}
 
 	cmd := exec.Command("sh", "-c", fmt.Sprintf(
-		"cd '%s' && sed -i '' -E 's|^# *INERTIA_SSR_ENABLED=.*|INERTIA_SSR_ENABLED=true|; s|^# *INERTIA_SSR_URL=.*|INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *INERTIA_SSR_TIMEOUT=.*|INERTIA_SSR_TIMEOUT=3s|' .env",
+		"cd '%s' && sed -E 's|^# *INERTIA_SSR_ENABLED=.*|INERTIA_SSR_ENABLED=true|; s|^# *INERTIA_SSR_URL=.*|INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *INERTIA_SSR_TIMEOUT=.*|INERTIA_SSR_TIMEOUT=3s|' .env > .env.tmp && mv .env.tmp .env",
 		absPath,
 	))
 	if err := cmd.Run(); err != nil {

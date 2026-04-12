@@ -6,8 +6,6 @@ on:
     paths-ignore:
       - "*.md"
       - ".github/**"
-    tags:
-      - "v*"
   pull_request:
     branches: [main]
 
@@ -15,7 +13,8 @@ permissions:
   contents: write
 
 jobs:
-  test:
+  pr-check:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,8 +35,7 @@ jobs:
       - name: Run tests
         run: go test ./... -race
 
-  release:
-    needs: test
+  cicd:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     outputs:
@@ -66,7 +64,9 @@ jobs:
         with:
           go-version: "1.26"
 
-      - name: Auto-format
+      # gofmt runs first: auto-format and commit any changes so that the
+      # test step (and everything downstream) sees the formatted code.
+      - name: gofmt (auto-format)
         if: steps.check.outputs.skip == 'false'
         run: |
           gofmt -w .
@@ -76,6 +76,10 @@ jobs:
             git add -A
             git commit -m "chore: auto-format with gofmt"
           fi
+
+      - name: Run tests
+        if: steps.check.outputs.skip == 'false'
+        run: go test ./... -race
 
       - name: Calculate version and changelog
         if: steps.check.outputs.skip == 'false'
@@ -116,7 +120,7 @@ jobs:
               ENTRY=$(echo "$msg" | sed 's/^add[:(].*[):] *//' | sed 's/^add: *//')
               ADDED="${ADDED}- ${ENTRY}\n"
             else
-              if ! echo "$msg" | grep -qiE "^bump|^merge|^Bump"; then
+              if ! echo "$msg" | grep -qiE "^bump|^merge|^Bump|^chore: auto-format"; then
                 CHANGED="${CHANGED}- ${msg}\n"
               fi
             fi
@@ -173,16 +177,14 @@ jobs:
           git push origin "v$NEW_VERSION"
 
   goreleaser:
-    needs: release
-    if: needs.release.outputs.skip == 'false'
+    needs: cicd
+    if: needs.cicd.outputs.skip == 'false'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout at release tag
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.release.outputs.tag }}
+          ref: ${{ needs.cicd.outputs.tag }}
           fetch-depth: 0
 
       - name: Set up Go
