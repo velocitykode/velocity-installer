@@ -7,6 +7,7 @@ on:
       - "*.md"
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -60,7 +61,7 @@ jobs:
         run: go test ./... -race
 
       - name: Bump version and changelog
-        if: steps.check.outputs.skip == 'false' && github.event_name == 'push'
+        if: steps.check.outputs.skip == 'false' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
         id: version
         run: |
           CURRENT=$(grep 'var Version' main.go | sed 's/.*"\(.*\)"/\1/')
@@ -138,7 +139,7 @@ jobs:
 
   goreleaser:
     needs: ci
-    if: needs.ci.outputs.skip == 'false' && github.event_name == 'push'
+    if: needs.ci.outputs.skip == 'false' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout at release tag
