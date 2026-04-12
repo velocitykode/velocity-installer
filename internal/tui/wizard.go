@@ -2,6 +2,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 
 	cli "github.com/velocitykode/velocity-cli"
@@ -79,7 +80,7 @@ func LaunchNewProjectWizard(projectName string) {
 		API:      featureSet["api-only"],
 	}
 
-	if err := generator.CreateProject(config); err != nil {
+	if err := generator.CreateProject(config); err != nil && !errors.Is(err, generator.ErrMigrationsSkipped) {
 		cli.Error(fmt.Sprintf("Error creating project: %v", err))
 		return
 	}
@@ -95,7 +96,7 @@ func CreateProjectWithDefaults(projectName string) {
 		Module: projectName,
 	}
 
-	if err := generator.CreateProject(config); err != nil {
+	if err := generator.CreateProject(config); err != nil && !errors.Is(err, generator.ErrMigrationsSkipped) {
 		cli.Error(fmt.Sprintf("Error creating project: %v", err))
 		return
 	}
@@ -111,8 +112,7 @@ func showSuccess(projectName string) {
 	cli.Newline()
 	cli.NextSteps([]string{
 		"cd " + projectName,
-		"npm run dev",
-		"go run main.go",
+		"go run . serve",
 	})
 	cli.Muted("Default port: 4000 (set PORT env to change)")
 	cli.Newline()
