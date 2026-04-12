@@ -559,22 +559,26 @@ CACHE_DRIVER=memory
 					t.Error(".env should pass CRYPTO_KEY through from .env.example unchanged")
 				}
 
-				// APP_KEY must be written so `./vel migrate` can bootstrap.
-				// The fixture has no APP_KEY line, so upsertEnvLine should
-				// prepend one with a 44-char standard-base64 value.
-				var appKeyLine string
-				for _, line := range strings.Split(envStr, "\n") {
-					if strings.HasPrefix(line, "APP_KEY=") {
-						appKeyLine = line
-						break
+				// APP_KEY, QUEUE_SIGNING_KEY, JWT_SECRET must all be
+				// written so the framework has everything it needs at
+				// bootstrap. Each should be a 44-char base64 value
+				// (32 random bytes, standard encoding with padding).
+				for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "JWT_SECRET"} {
+					var match string
+					for _, line := range strings.Split(envStr, "\n") {
+						if strings.HasPrefix(line, envKey+"=") {
+							match = line
+							break
+						}
 					}
-				}
-				if appKeyLine == "" {
-					t.Fatal(".env missing APP_KEY line")
-				}
-				value := strings.TrimPrefix(appKeyLine, "APP_KEY=")
-				if len(value) != 44 { // base64(32 bytes) = 44 chars with padding
-					t.Errorf("APP_KEY length = %d, want 44 (base64 of 32 bytes)", len(value))
+					if match == "" {
+						t.Errorf(".env missing %s line", envKey)
+						continue
+					}
+					value := strings.TrimPrefix(match, envKey+"=")
+					if len(value) != 44 {
+						t.Errorf("%s length = %d, want 44 (base64 of 32 bytes)", envKey, len(value))
+					}
 				}
 			},
 			wantErr: false,

@@ -561,16 +561,21 @@ func createEnvFiles(config ProjectConfig) error {
 		return err
 	}
 
-	// Generate APP_KEY using the same scheme as the framework's
-	// console.KeyGenerate (crypto/rand 32 bytes, base64 encoded). Write
-	// it back with a Go helper instead of sed because sed can't append
-	// the line if it's missing.
-	appKey, err := generateAppKey()
-	if err != nil {
-		return fmt.Errorf("generate app key: %w", err)
-	}
-	if err := upsertEnvLine(filepath.Join(absPath, ".env"), "APP_KEY", appKey); err != nil {
-		return fmt.Errorf("write app key: %w", err)
+	// Generate APP_KEY, QUEUE_SIGNING_KEY, and JWT_SECRET using the same
+	// scheme as the framework's console.KeyGenerate (crypto/rand 32
+	// bytes, base64 encoded). Separate keys per domain so crypto, queue
+	// signing, and JWT auth never share the same key material. Write
+	// via a Go helper instead of sed because sed can't append a missing
+	// line.
+	envPath := filepath.Join(absPath, ".env")
+	for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "JWT_SECRET"} {
+		value, err := generateKey()
+		if err != nil {
+			return fmt.Errorf("generate %s: %w", envKey, err)
+		}
+		if err := upsertEnvLine(envPath, envKey, value); err != nil {
+			return fmt.Errorf("write %s: %w", envKey, err)
+		}
 	}
 
 	// Update DB settings based on config
@@ -607,11 +612,10 @@ func createEnvFiles(config ProjectConfig) error {
 	return nil
 }
 
-// generateAppKey mirrors velocity/console.KeyGenerate — 32 crypto/rand
-// bytes, standard-base64 encoded. The framework's config layer reads
-// APP_KEY raw (no prefix) and uses it for both crypto and queue signing
-// fallback.
-func generateAppKey() (string, error) {
+// generateKey mirrors velocity/console.KeyGenerate — 32 crypto/rand
+// bytes, standard-base64 encoded. Used for APP_KEY, QUEUE_SIGNING_KEY,
+// and JWT_SECRET; the framework reads each raw (no prefix).
+func generateKey() (string, error) {
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
 		return "", err
