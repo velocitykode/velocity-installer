@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.1] - 2026-04-12
+
+### Changed
+- refactor: migrate UI to velocity-cli SDK
+
 ## [0.9.0] - 2026-04-12
 
 ### Added
