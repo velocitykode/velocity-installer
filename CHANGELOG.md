@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.13.0] - 2026-04-12
+
+### Added
+- generate APP_KEY, QUEUE_SIGNING_KEY, and JWT_SECRET
+
 ## [0.12.4] - 2026-04-12
 
 ## [0.12.3] - 2026-04-12
