@@ -24,7 +24,7 @@ func MediumBlocky() string {
 ╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝  
  ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║   
   ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝`) + "\n" +
-		cli.StyleMuted(`       The Official CLI for Velocity Web Framework`)
+		cli.StyleMuted(`       The Official Installer for Velocity Web Framework`)
 }
 
 // CompactBlocky returns compact blocky text
