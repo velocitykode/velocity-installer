@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.9.0] - 2026-04-12
+
+### Added
+- --ssr flag for velocity new
+
 ## [0.8.0] - 2026-04-09
 
 ### Added
