@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.1] - 2026-04-12
+
+### Fixed
+- portable sed so tests pass on GNU + BSD
+- consume published velocity-cli and embed theme file outside gitignore glob
+
 ## [0.10.0] - 2026-04-12
 
 ### Added
