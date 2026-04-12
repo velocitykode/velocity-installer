@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.10.2] - 2026-04-12
+
+### Changed
+- refactor(ci): single ci job for push + PR
+
 ## [0.10.1] - 2026-04-12
 
 ### Fixed
