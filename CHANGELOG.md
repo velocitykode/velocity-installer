@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.3] - 2026-04-12
+
+### Changed
+- ci: allow manual dispatch of the release workflow
+
 ## [0.12.2] - 2026-04-12
 
 ### Fixed
