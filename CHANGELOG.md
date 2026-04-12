@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.12.1] - 2026-04-12
+
+### Changed
+- chore: rename 'Official CLI' tagline to 'Official Installer'
+
 ## [0.12.0] - 2026-04-12
 
 ### Added
