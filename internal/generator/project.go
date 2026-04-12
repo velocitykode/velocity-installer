@@ -54,6 +54,12 @@ type ProjectConfig struct {
 	Cache    string
 	Auth     bool
 	API      bool
+	// SSR toggles Inertia server-side rendering in the generated app.
+	// When true the installer enables INERTIA_SSR_ENABLED=true and
+	// points INERTIA_SSR_URL at Vite's /__inertia_ssr dev endpoint.
+	// When false the installer adds ssr:false to vite.config.ts so the
+	// @inertiajs/vite plugin stays quiet in dev.
+	SSR bool
 }
 
 // CreateProject generates a new Velocity project from template
@@ -567,6 +573,31 @@ func createEnvFiles(config ProjectConfig) error {
 		}
 	}
 
+	if err := applySSROption(config, absPath); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// applySSROption wires the --ssr flag into the generated project.
+// SSR is strictly opt-in: without --ssr the installer leaves every
+// SSR-related config untouched (the template ships with Inertia Vite
+// plugin's v3 defaults). With --ssr we enable INERTIA_SSR_ENABLED in
+// .env and point the URL at Vite's dev endpoint, so the scaffold is
+// serving SSR out of the box.
+func applySSROption(config ProjectConfig, absPath string) error {
+	if !config.SSR || config.API {
+		return nil
+	}
+
+	cmd := exec.Command("sh", "-c", fmt.Sprintf(
+		"cd '%s' && sed -i '' -E 's|^# *INERTIA_SSR_ENABLED=.*|INERTIA_SSR_ENABLED=true|; s|^# *INERTIA_SSR_URL=.*|INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *INERTIA_SSR_TIMEOUT=.*|INERTIA_SSR_TIMEOUT=3s|' .env",
+		absPath,
+	))
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("enable ssr in .env: %w", err)
+	}
 	return nil
 }
 

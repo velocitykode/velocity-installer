@@ -13,6 +13,7 @@ var (
 	database string
 	cache    string
 	api      bool
+	ssr      bool
 )
 
 var NewCmd = &cobra.Command{
@@ -30,6 +31,7 @@ var NewCmd = &cobra.Command{
 			ui.Muted("  --database    Database driver (postgres, sqlite)")
 			ui.Muted("  --cache       Cache driver (redis, memory)")
 			ui.Muted("  --api         Create API-only project (no frontend)")
+			ui.Muted("  --ssr         Enable Inertia server-side rendering")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -45,6 +47,7 @@ var NewCmd = &cobra.Command{
 			Database: database,
 			Cache:    cache,
 			API:      api,
+			SSR:      ssr,
 		}
 
 		if err := generator.CreateProject(config); err != nil {
@@ -75,4 +78,5 @@ func init() {
 	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, sqlite)")
 	NewCmd.Flags().StringVar(&cache, "cache", "memory", "Cache driver (redis, memory)")
 	NewCmd.Flags().BoolVar(&api, "api", false, "Create API-only project (no frontend)")
+	NewCmd.Flags().BoolVar(&ssr, "ssr", false, "Enable Inertia server-side rendering (sets INERTIA_SSR_ENABLED=true and wires Vite SSR)")
 }
