@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -121,14 +119,28 @@ func CreateProject(config ProjectConfig) error {
 	}
 	cli.Success("Hot reload configured")
 
-	// Install dependencies
+	cli.Newline()
 	cli.Info("Installing dependencies")
 	if err := installDependencies(config.Name, config.API); err != nil {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
 
-	// Preflight the database so migrations don't fail with a wall of driver
-	// errors when the server isn't running or the database hasn't been created.
+	// Everything downstream (key:generate, migrate, serve) shells out to
+	// the project-local vel binary so the framework stays authoritative —
+	// the installer owns no runtime logic.
+	cli.Newline()
+	cli.Info("Building vel")
+	if err := buildVel(config.Name); err != nil {
+		return fmt.Errorf("failed to build vel: %w", err)
+	}
+	cli.Success("Built ./vel")
+
+	cli.Newline()
+	cli.Info("Generating application key")
+	if err := runVel(config.Name, "key:generate"); err != nil {
+		return fmt.Errorf("failed to generate app key: %w", err)
+	}
+
 	cli.Newline()
 	ready, err := ensureDatabaseReady(config.Name)
 	if err != nil {
@@ -140,13 +152,44 @@ func CreateProject(config ProjectConfig) error {
 		return ErrMigrationsSkipped
 	}
 
-	cli.Info("Running migrations...")
-	if err := runMigrations(config.Name); err != nil {
+	cli.Newline()
+	cli.Info("Running migrations")
+	if err := runVel(config.Name, "migrate"); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 	cli.Success("Migrations complete")
 
 	return nil
+}
+
+// buildVel compiles the project's vel binary. Downstream steps (key:generate,
+// migrate, serve) shell out to this binary, so every user-visible action
+// flows through the framework's own console commands.
+func buildVel(projectPath string) error {
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("go", "build", "-o", "vel", ".")
+	cmd.Dir = absPath
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// runVel invokes the project's own vel binary with the given args and
+// streams its output through so the framework's console UI stays intact.
+func runVel(projectPath string, args ...string) error {
+	absPath, err := filepath.Abs(projectPath)
+	if err != nil {
+		return err
+	}
+	cmd := exec.Command("./vel", args...)
+	cmd.Dir = absPath
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // ErrMigrationsSkipped signals that project scaffolding succeeded but the
@@ -505,8 +548,9 @@ func InitProject(config ProjectConfig, targetDir string) error {
 	return nil
 }
 
-// addVelocityDependencies adds Velocity and feature dependencies to existing go.mod
-// createEnvFiles copies .env.example to .env and generates a new crypto key
+// createEnvFiles copies .env.example to .env and patches the install-time
+// choices (db driver, cache driver, SSR). Key material is left alone — the
+// framework's `./vel key:generate` step writes APP_KEY later.
 func createEnvFiles(config ProjectConfig) error {
 	absPath, err := filepath.Abs(config.Name)
 	if err != nil {
@@ -515,19 +559,6 @@ func createEnvFiles(config ProjectConfig) error {
 
 	// Copy .env.example to .env
 	cmd := exec.Command("cp", filepath.Join(absPath, ".env.example"), filepath.Join(absPath, ".env"))
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	// Generate new crypto key
-	newKey, err := generateCryptoKey()
-	if err != nil {
-		return err
-	}
-
-	// Replace crypto key in .env
-	cmd = exec.Command("sh", "-c",
-		fmt.Sprintf("cd '%s' && sed 's|^CRYPTO_KEY=.*|CRYPTO_KEY=base64:%s|' .env > .env.tmp && mv .env.tmp .env", absPath, newKey))
 	if err := cmd.Run(); err != nil {
 		return err
 	}
@@ -585,15 +616,6 @@ func applySSROption(config ProjectConfig, absPath string) error {
 		return fmt.Errorf("enable ssr in .env: %w", err)
 	}
 	return nil
-}
-
-// generateCryptoKey generates a new 32-byte base64 encoded key
-func generateCryptoKey() (string, error) {
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(key), nil
 }
 
 // createDefaultMigrations creates default migration files only if the template
@@ -724,21 +746,6 @@ func init() {
 	return nil
 }
 
-// runMigrations runs migrations using the app's built-in migrate command.
-func runMigrations(projectPath string) error {
-	absPath, err := filepath.Abs(projectPath)
-	if err != nil {
-		return err
-	}
-
-	cmd := exec.Command("go", "run", ".", "migrate")
-	cmd.Dir = absPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	return cmd.Run()
-}
-
 // StartDevServers launches `./vel serve`, which handles hot reload and Vite
 // itself (no separate air/npm processes needed).
 func StartDevServers(projectPath string, apiOnly bool) {
@@ -756,15 +763,14 @@ func StartDevServers(projectPath string, apiOnly bool) {
 		return
 	}
 
-	// Show URLs
-	cli.Step(fmt.Sprintf("cd %s", projectPath))
+	cli.Success("Dev server running")
+	cli.Newline()
+
+	cli.KeyValue("cd", projectPath)
 	if !apiOnly {
 		cli.KeyValue("Vite", cli.Highlight("http://localhost:5173"))
 	}
 	cli.KeyValue("Velocity", cli.Highlight("http://localhost:4000"))
-
-	cli.Newline()
-	cli.Success("Build something great!")
 	cli.Newline()
 
 	cli.Muted("Tip: ./vel serve, ./vel migrate, ./vel route:list, ./vel make:handler")

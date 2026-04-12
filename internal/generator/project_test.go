@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"encoding/base64"
 	"os"
 	"path/filepath"
 	"strings"
@@ -319,119 +318,6 @@ func TestValidateProjectName(t *testing.T) {
 	}
 }
 
-func TestGenerateCryptoKey(t *testing.T) {
-	tests := []struct {
-		name    string
-		wantErr bool
-	}{
-		{
-			name:    "generates key successfully",
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := generateCryptoKey()
-			if (err != nil) != tt.wantErr {
-				t.Errorf("generateCryptoKey() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-
-			// Test that output is 44 characters (32 bytes base64 encoded)
-			// 32 bytes = 256 bits, base64 encoding adds ~33% overhead
-			// 32 * 4/3 = 42.67, rounded up with padding = 44
-			expectedLen := 44
-			if len(got) != expectedLen {
-				t.Errorf("generateCryptoKey() length = %d, want %d", len(got), expectedLen)
-			}
-
-			// Test that output is valid base64
-			decoded, err := base64.StdEncoding.DecodeString(got)
-			if err != nil {
-				t.Errorf("generateCryptoKey() output is not valid base64: %v", err)
-			}
-
-			// Test that decoded value is exactly 32 bytes
-			if len(decoded) != 32 {
-				t.Errorf("generateCryptoKey() decoded length = %d, want 32", len(decoded))
-			}
-
-			// Test that it contains only valid base64 characters
-			validChars := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/="
-			for _, char := range got {
-				if !strings.ContainsRune(validChars, char) {
-					t.Errorf("generateCryptoKey() contains invalid base64 character: %c", char)
-				}
-			}
-		})
-	}
-
-	// Test cryptographic uniqueness - multiple calls should produce different keys
-	t.Run("produces distinct keys on multiple calls", func(t *testing.T) {
-		iterations := 100
-		keys := make(map[string]bool, iterations)
-
-		for i := 0; i < iterations; i++ {
-			key, err := generateCryptoKey()
-			if err != nil {
-				t.Fatalf("generateCryptoKey() iteration %d error = %v", i, err)
-			}
-
-			if keys[key] {
-				t.Errorf("generateCryptoKey() produced duplicate key: %s", key)
-			}
-			keys[key] = true
-		}
-
-		if len(keys) != iterations {
-			t.Errorf("generateCryptoKey() produced %d unique keys, want %d", len(keys), iterations)
-		}
-	})
-
-	// Test that keys have sufficient entropy (no all-zero bytes)
-	t.Run("generates keys with sufficient entropy", func(t *testing.T) {
-		key, err := generateCryptoKey()
-		if err != nil {
-			t.Fatalf("generateCryptoKey() error = %v", err)
-		}
-
-		decoded, err := base64.StdEncoding.DecodeString(key)
-		if err != nil {
-			t.Fatalf("generateCryptoKey() failed to decode: %v", err)
-		}
-
-		// Check that not all bytes are zero
-		allZero := true
-		for _, b := range decoded {
-			if b != 0 {
-				allZero = false
-				break
-			}
-		}
-
-		if allZero {
-			t.Error("generateCryptoKey() generated all-zero key (no entropy)")
-		}
-
-		// Check that not all bytes are the same
-		if len(decoded) > 0 {
-			firstByte := decoded[0]
-			allSame := true
-			for _, b := range decoded {
-				if b != firstByte {
-					allSame = false
-					break
-				}
-			}
-
-			if allSame {
-				t.Error("generateCryptoKey() generated key with all identical bytes (poor entropy)")
-			}
-		}
-	})
-}
-
 func TestValidateProjectNameEdgeCasesWithCleanup(t *testing.T) {
 	// This test ensures cleanup happens properly for directory tests
 	t.Run("cleanup after directory exists test", func(t *testing.T) {
@@ -666,31 +552,11 @@ CACHE_DRIVER=memory
 
 				envStr := string(content)
 
-				// Verify crypto key was replaced
-				if strings.Contains(envStr, "CRYPTO_KEY=base64:oldkeyhere") {
-					t.Error(".env still contains old crypto key")
-				}
-				if !strings.Contains(envStr, "CRYPTO_KEY=base64:") {
-					t.Error(".env does not contain CRYPTO_KEY=base64: prefix")
-				}
-
-				// Verify crypto key is different and valid base64
-				lines := strings.Split(envStr, "\n")
-				for _, line := range lines {
-					if strings.HasPrefix(line, "CRYPTO_KEY=base64:") {
-						key := strings.TrimPrefix(line, "CRYPTO_KEY=base64:")
-						if key == "oldkeyhere" {
-							t.Error("crypto key was not changed")
-						}
-						// Verify it's valid base64
-						decoded, err := base64.StdEncoding.DecodeString(key)
-						if err != nil {
-							t.Errorf("crypto key is not valid base64: %v", err)
-						}
-						if len(decoded) != 32 {
-							t.Errorf("crypto key decoded length = %d, want 32", len(decoded))
-						}
-					}
+				// createEnvFiles no longer touches CRYPTO_KEY — `./vel
+				// key:generate` writes APP_KEY later. The placeholder
+				// from .env.example should be copied through untouched.
+				if !strings.Contains(envStr, "CRYPTO_KEY=base64:oldkeyhere") {
+					t.Error(".env should pass CRYPTO_KEY through from .env.example unchanged")
 				}
 			},
 			wantErr: false,
@@ -819,13 +685,8 @@ CACHE_DRIVER=memory
 				os.WriteFile(filepath.Join(projectPath, ".env.example"), []byte(envExample), 0644)
 			},
 			verify: func(t *testing.T, projectPath string) {
-				content, err := os.ReadFile(filepath.Join(projectPath, ".env"))
-				if err != nil {
+				if _, err := os.ReadFile(filepath.Join(projectPath, ".env")); err != nil {
 					t.Fatalf("failed to read .env: %v", err)
-				}
-				// Should still update crypto key
-				if !strings.Contains(string(content), "CRYPTO_KEY=base64:") {
-					t.Error(".env does not contain CRYPTO_KEY")
 				}
 			},
 			wantErr: false,

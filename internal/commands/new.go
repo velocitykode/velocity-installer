@@ -3,7 +3,7 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os/exec"
+	"os"
 
 	"github.com/spf13/cobra"
 	cli "github.com/velocitykode/velocity-cli"
@@ -41,6 +41,34 @@ var NewCmd = &cobra.Command{
 		projectName := args[0]
 		cli.Header("velocity new")
 
+		// Fail fast before asking any questions — the rest of the flow
+		// (template clone, module rewrite, ...) can't recover from a
+		// pre-existing path.
+		if info, err := os.Stat(projectName); err == nil {
+			kind := "file"
+			if info.IsDir() {
+				kind = "directory"
+			}
+			cli.Error(fmt.Sprintf("A %s named '%s' already exists here", kind, projectName))
+			cli.Muted("Pick a different name, or remove the existing path and try again.")
+			return
+		} else if !os.IsNotExist(err) {
+			cli.Error(fmt.Sprintf("Cannot check '%s': %v", projectName, err))
+			return
+		}
+
+		if !cmd.Flags().Changed("api") {
+			const (
+				labelFullStack = "Full stack (Inertia + Vite)"
+				labelAPI       = "API only (no frontend)"
+			)
+			api = cli.Select(
+				"Project type:",
+				[]string{labelFullStack, labelAPI},
+				cli.WithSelectDefault(labelFullStack),
+			) == labelAPI
+		}
+
 		if !cmd.Flags().Changed("database") {
 			database = cli.Select(
 				"Database:",
@@ -62,44 +90,25 @@ var NewCmd = &cobra.Command{
 			SSR:      ssr,
 		}
 
-		migrationsSkipped := false
 		if err := generator.CreateProject(config); err != nil {
 			if errors.Is(err, generator.ErrMigrationsSkipped) {
-				migrationsSkipped = true
-			} else {
 				cli.Newline()
-				cli.Error(err.Error())
+				cli.Warning("Project ready — database setup pending")
+				cli.NextSteps([]string{
+					"Start your database server",
+					fmt.Sprintf("cd %s", projectName),
+					"./vel migrate",
+					"./vel serve",
+				})
 				return
 			}
-		}
-
-		// Build vel binary
-		cli.Step("Building vel...")
-		buildCmd := exec.Command("go", "build", "-o", "vel", ".")
-		buildCmd.Dir = projectName
-		if err := buildCmd.Run(); err != nil {
-			cli.Warning("Failed to build vel: " + err.Error())
-			cli.Muted("Run manually: go build -o vel .")
-		} else {
-			cli.Success("Built ./vel")
-		}
-
-		cli.Newline()
-
-		if migrationsSkipped {
-			// Launching the dev server now would just spew DB connection
-			// errors. Hand control back to the user with concrete next steps.
-			cli.Info("Project ready — database setup pending")
-			cli.NextSteps([]string{
-				"Start your database server",
-				fmt.Sprintf("cd %s", projectName),
-				"./vel migrate",
-				"./vel serve",
-			})
+			cli.Newline()
+			cli.Error(err.Error())
 			return
 		}
 
-		cli.Info("Starting development servers")
+		cli.Newline()
+		cli.Info("Starting development server")
 		generator.StartDevServers(projectName, config.API)
 	},
 }
