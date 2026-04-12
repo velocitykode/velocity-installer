@@ -2,19 +2,28 @@
 package main
 
 import (
+	"bytes"
+	_ "embed"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
+	cli "github.com/velocitykode/velocity-cli"
 	"github.com/velocitykode/velocity-installer/internal/banner"
-	"github.com/velocitykode/velocity-installer/internal/colors"
 	"github.com/velocitykode/velocity-installer/internal/commands"
 	"github.com/velocitykode/velocity-installer/internal/version"
 )
 
 var Version = "0.9.0"
 
+//go:embed velocity-cli.toml
+var themeConfig []byte
+
 func main() {
+	if err := cli.LoadConfig(bytes.NewReader(themeConfig)); err != nil {
+		fmt.Fprintf(os.Stderr, "velocity-cli theme: %v\n", err)
+	}
+
 	if err := version.CheckGoVersion(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -26,7 +35,7 @@ func main() {
 		Version: Version,
 		Run: func(cmd *cobra.Command, args []string) {
 			fmt.Println(banner.Simple())
-			fmt.Println(colors.MutedStyle.Render("       The Official CLI for Velocity Web Framework"))
+			fmt.Println(cli.StyleMuted("       The Official CLI for Velocity Web Framework"))
 			fmt.Println()
 			cmd.Help()
 		},

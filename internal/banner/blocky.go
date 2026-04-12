@@ -1,12 +1,12 @@
 package banner
 
 import (
-	"github.com/velocitykode/velocity-installer/internal/colors"
+	cli "github.com/velocitykode/velocity-cli"
 )
 
 // BlockyText returns blocky ASCII art for VELOCITY CLI
 func BlockyText() string {
-	return colors.BrandStyle.Render(`
+	return cli.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗     ██████╗██╗     ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝    ██╔════╝██║     ██║
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝     ██║     ██║     ██║
@@ -17,19 +17,19 @@ func BlockyText() string {
 
 // MediumBlocky returns medium-sized blocky text
 func MediumBlocky() string {
-	return colors.BrandStyle.Render(`
+	return cli.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝ 
 ╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝  
  ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║   
   ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝`) + "\n" +
-		colors.MutedStyle.Render(`       The Official CLI for Velocity Web Framework`)
+		cli.StyleMuted(`       The Official CLI for Velocity Web Framework`)
 }
 
 // CompactBlocky returns compact blocky text
 func CompactBlocky() string {
-	return colors.BrandStyle.Render(`
+	return cli.StylePrimary(`
 █╗   █╗█████╗██╗     ██████╗ ██████╗██╗████████╗█╗   █╗    ██████╗██╗   ██╗
 █║   █║██╔══╝██║    ██╔═══██╗██╔═══╝██║╚══██╔══╝╚█╗ █╔╝    ██╔═══╝██║   ██║
 █║   █║████╗ ██║    ██║   ██║██║    ██║   ██║    ╚███╔╝    ██║    ██║   ██║

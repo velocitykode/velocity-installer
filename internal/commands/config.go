@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/velocitykode/velocity-installer/internal/config"
-	"github.com/velocitykode/velocity-installer/internal/ui"
+	cli "github.com/velocitykode/velocity-cli"
 )
 
 var ConfigCmd = &cobra.Command{
@@ -22,9 +22,9 @@ var configSetCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
-			ui.Error("Key and value are required")
-			ui.Newline()
-			ui.Muted("Usage: velocity config set <key> <value>")
+			cli.Error("Key and value are required")
+			cli.Newline()
+			cli.Muted("Usage: velocity config set <key> <value>")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -39,9 +39,9 @@ var configGetCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			ui.Error("Key is required")
-			ui.Newline()
-			ui.Muted("Usage: velocity config get <key>")
+			cli.Error("Key is required")
+			cli.Newline()
+			cli.Muted("Usage: velocity config get <key>")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -107,10 +107,10 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	ui.Success(fmt.Sprintf("Set %s = %s", key, value))
+	cli.Success(fmt.Sprintf("Set %s = %s", key, value))
 
 	path, _ := config.ConfigPath()
-	ui.Muted(fmt.Sprintf("Configuration saved to %s", path))
+	cli.Muted(fmt.Sprintf("Configuration saved to %s", path))
 
 	return nil
 }
@@ -148,9 +148,9 @@ func runConfigGet(cmd *cobra.Command, args []string) error {
 	}
 
 	if value == "" || value == "false" {
-		ui.Muted("(not set)")
+		cli.Muted("(not set)")
 	} else {
-		ui.Info(value)
+		cli.Info(value)
 	}
 
 	return nil
@@ -163,22 +163,22 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 	}
 
 	path, _ := config.ConfigPath()
-	ui.Info(fmt.Sprintf("Configuration (%s)", path))
+	cli.Info(fmt.Sprintf("Configuration (%s)", path))
 
 	if cfg.Defaults.Database != "" {
-		ui.KeyValue("default.database", cfg.Defaults.Database)
+		cli.KeyValue("default.database", cfg.Defaults.Database)
 	}
 	if cfg.Defaults.Cache != "" {
-		ui.KeyValue("default.cache", cfg.Defaults.Cache)
+		cli.KeyValue("default.cache", cfg.Defaults.Cache)
 	}
 	if cfg.Defaults.Queue != "" {
-		ui.KeyValue("default.queue", cfg.Defaults.Queue)
+		cli.KeyValue("default.queue", cfg.Defaults.Queue)
 	}
 	if cfg.Defaults.Auth {
-		ui.KeyValue("default.auth", "true")
+		cli.KeyValue("default.auth", "true")
 	}
 	if cfg.Defaults.API {
-		ui.KeyValue("default.api", "true")
+		cli.KeyValue("default.api", "true")
 	}
 
 	return nil
@@ -194,8 +194,8 @@ func runConfigReset(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to reset config: %w", err)
 	}
 
-	ui.Success("Configuration reset")
-	ui.Muted(fmt.Sprintf("Deleted %s", path))
+	cli.Success("Configuration reset")
+	cli.Muted(fmt.Sprintf("Deleted %s", path))
 
 	return nil
 }

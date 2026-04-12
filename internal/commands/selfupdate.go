@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/velocitykode/velocity-installer/internal/ui"
+	cli "github.com/velocitykode/velocity-cli"
 )
 
 var SelfUpdateCmd = &cobra.Command{
@@ -33,9 +33,9 @@ type githubAsset struct {
 }
 
 func runSelfUpdate(cmd *cobra.Command, args []string) error {
-	ui.Header("self-update")
+	cli.Header("self-update")
 
-	ui.Step("Checking for updates...")
+	cli.Step("Checking for updates...")
 
 	// Fetch latest release
 	resp, err := http.Get("https://api.github.com/repos/velocitykode/velocity-installer/releases/latest")
@@ -45,7 +45,7 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == 404 {
-		ui.Info("No releases found yet")
+		cli.Info("No releases found yet")
 		return nil
 	}
 
@@ -63,11 +63,11 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 	currentVersion := strings.TrimPrefix(InstallerVersion, "v")
 
 	if latestVersion == currentVersion {
-		ui.Success(fmt.Sprintf("Already up to date (v%s)", currentVersion))
+		cli.Success(fmt.Sprintf("Already up to date (v%s)", currentVersion))
 		return nil
 	}
 
-	ui.Info(fmt.Sprintf("New version available: v%s (current: v%s)", latestVersion, currentVersion))
+	cli.Info(fmt.Sprintf("New version available: v%s (current: v%s)", latestVersion, currentVersion))
 
 	// Find asset for current OS/arch
 	assetName := fmt.Sprintf("velocity-%s-%s", runtime.GOOS, runtime.GOARCH)
@@ -88,7 +88,7 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Download new binary
-	ui.Step("Downloading update...")
+	cli.Step("Downloading update...")
 	resp, err = http.Get(downloadURL)
 	if err != nil {
 		return fmt.Errorf("failed to download update: %w", err)
@@ -125,7 +125,7 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	// Replace current binary
-	ui.Step("Installing update...")
+	cli.Step("Installing update...")
 	if err := os.Rename(tmpFile.Name(), execPath); err != nil {
 		// Try copying if rename fails (cross-device)
 		if err := copyFile(tmpFile.Name(), execPath); err != nil {
@@ -133,7 +133,7 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	ui.Success(fmt.Sprintf("Updated to v%s", latestVersion))
+	cli.Success(fmt.Sprintf("Updated to v%s", latestVersion))
 	return nil
 }
 
