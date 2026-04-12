@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -125,21 +127,16 @@ func CreateProject(config ProjectConfig) error {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
 
-	// Everything downstream (key:generate, migrate, serve) shells out to
-	// the project-local vel binary so the framework stays authoritative —
-	// the installer owns no runtime logic.
+	// Build the project-local vel binary. Downstream runtime steps
+	// (migrate, serve) shell out to this binary so framework updates
+	// flow through automatically. APP_KEY is already written to .env
+	// by createEnvFiles, so `./vel` can bootstrap cleanly.
 	cli.Newline()
 	cli.Info("Building vel")
 	if err := buildVel(config.Name); err != nil {
 		return fmt.Errorf("failed to build vel: %w", err)
 	}
 	cli.Success("Built ./vel")
-
-	cli.Newline()
-	cli.Info("Generating application key")
-	if err := runVel(config.Name, "key:generate"); err != nil {
-		return fmt.Errorf("failed to generate app key: %w", err)
-	}
 
 	cli.Newline()
 	ready, err := ensureDatabaseReady(config.Name)
@@ -548,9 +545,10 @@ func InitProject(config ProjectConfig, targetDir string) error {
 	return nil
 }
 
-// createEnvFiles copies .env.example to .env and patches the install-time
-// choices (db driver, cache driver, SSR). Key material is left alone — the
-// framework's `./vel key:generate` step writes APP_KEY later.
+// createEnvFiles copies .env.example to .env, writes a freshly generated
+// APP_KEY, and patches the install-time choices (db driver, cache driver,
+// SSR). The APP_KEY must be present before the app bootstraps — otherwise
+// `./vel migrate` would fail in the session/cookie encryptor init.
 func createEnvFiles(config ProjectConfig) error {
 	absPath, err := filepath.Abs(config.Name)
 	if err != nil {
@@ -561,6 +559,18 @@ func createEnvFiles(config ProjectConfig) error {
 	cmd := exec.Command("cp", filepath.Join(absPath, ".env.example"), filepath.Join(absPath, ".env"))
 	if err := cmd.Run(); err != nil {
 		return err
+	}
+
+	// Generate APP_KEY using the same scheme as the framework's
+	// console.KeyGenerate (crypto/rand 32 bytes, base64 encoded). Write
+	// it back with a Go helper instead of sed because sed can't append
+	// the line if it's missing.
+	appKey, err := generateAppKey()
+	if err != nil {
+		return fmt.Errorf("generate app key: %w", err)
+	}
+	if err := upsertEnvLine(filepath.Join(absPath, ".env"), "APP_KEY", appKey); err != nil {
+		return fmt.Errorf("write app key: %w", err)
 	}
 
 	// Update DB settings based on config
@@ -595,6 +605,37 @@ func createEnvFiles(config ProjectConfig) error {
 	}
 
 	return nil
+}
+
+// generateAppKey mirrors velocity/console.KeyGenerate — 32 crypto/rand
+// bytes, standard-base64 encoded. The framework's config layer reads
+// APP_KEY raw (no prefix) and uses it for both crypto and queue signing
+// fallback.
+func generateAppKey() (string, error) {
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(key), nil
+}
+
+// upsertEnvLine replaces `<key>=...` in envPath with `<key>=<value>`,
+// prepending a new line if the key is absent.
+func upsertEnvLine(envPath, key, value string) error {
+	content, err := os.ReadFile(envPath)
+	if err != nil {
+		return err
+	}
+	prefix := key + "="
+	lines := strings.Split(string(content), "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, prefix) {
+			lines[i] = prefix + value
+			return os.WriteFile(envPath, []byte(strings.Join(lines, "\n")), 0600)
+		}
+	}
+	lines = append([]string{prefix + value}, lines...)
+	return os.WriteFile(envPath, []byte(strings.Join(lines, "\n")), 0600)
 }
 
 // applySSROption wires the --ssr flag into the generated project.

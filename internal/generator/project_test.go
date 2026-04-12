@@ -552,11 +552,29 @@ CACHE_DRIVER=memory
 
 				envStr := string(content)
 
-				// createEnvFiles no longer touches CRYPTO_KEY — `./vel
-				// key:generate` writes APP_KEY later. The placeholder
-				// from .env.example should be copied through untouched.
+				// CRYPTO_KEY placeholders are left untouched — APP_KEY
+				// is the single source of truth and also the crypto
+				// fallback in the framework's config layer.
 				if !strings.Contains(envStr, "CRYPTO_KEY=base64:oldkeyhere") {
 					t.Error(".env should pass CRYPTO_KEY through from .env.example unchanged")
+				}
+
+				// APP_KEY must be written so `./vel migrate` can bootstrap.
+				// The fixture has no APP_KEY line, so upsertEnvLine should
+				// prepend one with a 44-char standard-base64 value.
+				var appKeyLine string
+				for _, line := range strings.Split(envStr, "\n") {
+					if strings.HasPrefix(line, "APP_KEY=") {
+						appKeyLine = line
+						break
+					}
+				}
+				if appKeyLine == "" {
+					t.Fatal(".env missing APP_KEY line")
+				}
+				value := strings.TrimPrefix(appKeyLine, "APP_KEY=")
+				if len(value) != 44 { // base64(32 bytes) = 44 chars with padding
+					t.Errorf("APP_KEY length = %d, want 44 (base64 of 32 bytes)", len(value))
 				}
 			},
 			wantErr: false,
