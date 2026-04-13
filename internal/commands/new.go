@@ -108,8 +108,18 @@ var NewCmd = &cobra.Command{
 		}
 
 		cli.Newline()
-		cli.Info("Starting development server")
-		generator.StartDevServers(projectName, config.API)
+		cli.Success("Project ready")
+		cli.NextSteps([]string{
+			fmt.Sprintf("cd %s", projectName),
+			"./vel serve",
+		})
+		cli.KeyValue("App", cli.Highlight("http://localhost:4000"))
+		if !config.API {
+			cli.KeyValue("Vite", cli.Highlight("http://localhost:5173"))
+		}
+		cli.Newline()
+		cli.Muted("More: ./vel migrate, ./vel route:list, ./vel make:handler")
+		cli.Newline()
 	},
 }
 

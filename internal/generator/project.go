@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	cli "github.com/velocitykode/velocity-cli"
@@ -791,36 +790,6 @@ func init() {
 	return nil
 }
 
-// StartDevServers launches `./vel serve`, which handles hot reload and Vite
-// itself (no separate air/npm processes needed).
-func StartDevServers(projectPath string, apiOnly bool) {
-	absPath, err := filepath.Abs(projectPath)
-	if err != nil {
-		cli.Error(fmt.Sprintf("Failed to resolve project path: %v", err))
-		return
-	}
-
-	serveCmd := exec.Command("./vel", "serve")
-	serveCmd.Dir = absPath
-	serveCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	if err := serveCmd.Start(); err != nil {
-		cli.Error(fmt.Sprintf("Failed to start dev server: %v", err))
-		return
-	}
-
-	cli.Success("Dev server running")
-	cli.Newline()
-
-	cli.KeyValue("cd", projectPath)
-	if !apiOnly {
-		cli.KeyValue("Vite", cli.Highlight("http://localhost:5173"))
-	}
-	cli.KeyValue("Velocity", cli.Highlight("http://localhost:4000"))
-	cli.Newline()
-
-	cli.Muted("Tip: ./vel serve, ./vel migrate, ./vel route:list, ./vel make:handler")
-	cli.Newline()
-}
 
 func setupTemplatesAndHotReload(projectPath string) error {
 	// .air.toml and tmp/ in .gitignore are now part of the template
