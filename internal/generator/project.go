@@ -790,7 +790,6 @@ func init() {
 	return nil
 }
 
-
 func setupTemplatesAndHotReload(projectPath string) error {
 	// .air.toml and tmp/ in .gitignore are now part of the template
 	return nil
