@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.24] - 2026-04-19
+
+### Changed
+- style(cli): switch theme to Velocity brand greens
+
 ## [0.14.23] - 2026-04-19
 
 ### Changed
