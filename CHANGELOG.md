@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.22] - 2026-04-19
+
+### Fixed
+- uncomment DB_SSL_MODE=disable for postgres scaffolds
+
 ## [0.14.21] - 2026-04-19
 
 ## [0.14.20] - 2026-04-19
