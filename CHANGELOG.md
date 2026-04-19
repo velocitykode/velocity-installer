@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.23] - 2026-04-19
+
+### Changed
+- chore(version): bump minimum Go requirement to 1.26
+
 ## [0.14.22] - 2026-04-19
 
 ### Fixed
