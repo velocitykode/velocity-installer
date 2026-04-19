@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const MinimumGoVersion = "1.25"
+const MinimumGoVersion = "1.26"
 
 // CheckGoVersion verifies that the system's installed Go version meets the minimum requirement.
 // Returns an error if Go is not installed or version is too old.
@@ -123,7 +123,7 @@ func (e *VersionError) Error() string {
 type GoNotFoundError struct{}
 
 func (e *GoNotFoundError) Error() string {
-	return "Go is not installed or not in PATH. Velocity requires Go 1.25 or higher.\n\n" +
+	return "Go is not installed or not in PATH. Velocity requires Go 1.26 or higher.\n\n" +
 		"Please install Go:\n" +
 		"  brew install go\n\n" +
 		"Or download from: https://go.dev/dl/"
