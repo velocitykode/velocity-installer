@@ -585,10 +585,22 @@ func createEnvFiles(config ProjectConfig) error {
 		// Use base name for database name (not full path)
 		dbName := filepath.Base(config.Name)
 
-		// Update DB_CONNECTION, DB_PORT, DB_DATABASE, DB_USERNAME
-		sedCmds := fmt.Sprintf(
-			"sed 's|^DB_CONNECTION=.*|DB_CONNECTION=%s|; s|^DB_PORT=.*|DB_PORT=%s|; s|^DB_DATABASE=.*|DB_DATABASE=%s|; s|^DB_USERNAME=.*|DB_USERNAME=%s|' .env > .env.tmp && mv .env.tmp .env",
-			config.Database, ports[config.Database], dbName, username)
+		subs := []string{
+			fmt.Sprintf("s|^DB_CONNECTION=.*|DB_CONNECTION=%s|", config.Database),
+			fmt.Sprintf("s|^DB_PORT=.*|DB_PORT=%s|", ports[config.Database]),
+			fmt.Sprintf("s|^DB_DATABASE=.*|DB_DATABASE=%s|", dbName),
+			fmt.Sprintf("s|^DB_USERNAME=.*|DB_USERNAME=%s|", username),
+		}
+
+		// Local Postgres installs don't have SSL enabled by default, but the
+		// framework defaults to sslmode=require (secure-by-default). Uncomment
+		// the template's DB_SSL_MODE=disable so fresh scaffolds can connect
+		// out of the box. Production deployers override in their own .env.
+		if config.Database == "postgres" {
+			subs = append(subs, "s|^# *DB_SSL_MODE=.*|DB_SSL_MODE=disable|")
+		}
+
+		sedCmds := fmt.Sprintf("sed '%s' .env > .env.tmp && mv .env.tmp .env", strings.Join(subs, "; "))
 		cmd = exec.Command("sh", "-c", fmt.Sprintf("cd '%s' && %s", absPath, sedCmds))
 		if err := cmd.Run(); err != nil {
 			return err
