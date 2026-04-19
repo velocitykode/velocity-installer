@@ -6,8 +6,12 @@
 # both dark and light terminal backgrounds.
 
 [colors]
-primary = "#16a34a"  # emerald-600 — Velocity brand green
-success = "#10b981"  # emerald-500 — brighter, used for confirmations
+# primary = "default" means chrome text (section headers, command names,
+# the → arrow, spinner) renders bold in the terminal's own default fg —
+# black on light, white on dark. Reserves green strictly for success
+# (✓) and red for error (✗), matching standard terminal semantics.
+primary = "default"
+success = "#10b981"  # emerald-500 — confirmations (✓, "done")
 warning = "#d97706"  # amber-600 — legible on white
 error   = "#dc2626"  # red-600
 muted   = "#71717a"  # zinc-500
