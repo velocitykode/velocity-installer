@@ -137,7 +137,7 @@ func TestCheckMinimumGoVersion(t *testing.T) {
 func TestVersionError(t *testing.T) {
 	err := &VersionError{
 		Current: "go1.23.6",
-		Minimum: "1.25",
+		Minimum: "1.26",
 	}
 
 	msg := err.Error()
@@ -150,7 +150,7 @@ func TestVersionError(t *testing.T) {
 	if !contains(msg, "go1.23.6") {
 		t.Error("VersionError.Error() should contain current version")
 	}
-	if !contains(msg, "1.25") {
+	if !contains(msg, "1.26") {
 		t.Error("VersionError.Error() should contain minimum version")
 	}
 	if !contains(msg, "brew upgrade go") {
