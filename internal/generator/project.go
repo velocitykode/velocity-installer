@@ -114,12 +114,6 @@ func CreateProject(config ProjectConfig) error {
 	}
 	cli.Success("Environment configured")
 
-	// Setup hot reload
-	if err := setupTemplatesAndHotReload(config.Name); err != nil {
-		return fmt.Errorf("failed to setup templates: %w", err)
-	}
-	cli.Success("Hot reload configured")
-
 	cli.Newline()
 	cli.Info("Installing dependencies")
 	if err := installDependencies(config.Name, config.API); err != nil {
@@ -799,11 +793,6 @@ func init() {
 		}
 	}
 
-	return nil
-}
-
-func setupTemplatesAndHotReload(projectPath string) error {
-	// .air.toml and tmp/ in .gitignore are now part of the template
 	return nil
 }
 
