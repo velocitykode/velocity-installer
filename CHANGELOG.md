@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.15.0] - 2026-04-22
+
+### Added
+- stream dep install output in real time
+
 ## [0.14.32] - 2026-04-22
 
 ### Fixed
