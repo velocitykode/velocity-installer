@@ -460,6 +460,14 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	goGroup := &depGroup{name: "Go dependencies"}
 	jsGroup := &depGroup{name: "JS dependencies"}
 
+	// If we're going to fall back to npm, tell the user about bun first.
+	// Printing before the tree so it stays above the in-place redraws.
+	if !apiOnly {
+		if _, err := exec.LookPath("bun"); err != nil {
+			cli.Info("Tip: install bun for much faster JS installs → https://bun.sh")
+		}
+	}
+
 	// Hot reload now ships inside the vel binary via `./vel serve`, so
 	// no external watcher install.
 	printDepTree := func() int {
