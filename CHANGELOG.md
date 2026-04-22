@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.32] - 2026-04-22
+
+### Fixed
+- bump velocity-cli to v0.13.0 for Ctrl+C cancel
+
 ## [0.14.31] - 2026-04-22
 
 ### Fixed
