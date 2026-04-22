@@ -354,10 +354,18 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	// JS dependencies (skip for API-only projects)
 	if !apiOnly {
 		go func() {
-			if err := exec.Command("bun", "install").Run(); err != nil {
-				// Try npm as fallback
-				jsStatus.err = exec.Command("npm", "install").Run()
+			var pm string
+			if _, err := exec.LookPath("bun"); err == nil {
+				pm = "bun"
+			} else if _, err := exec.LookPath("npm"); err == nil {
+				pm = "npm"
+			} else {
+				jsStatus.err = fmt.Errorf("neither bun nor npm was found in PATH")
+				jsStatus.status = "failed"
+				done <- true
+				return
 			}
+			jsStatus.err = exec.Command(pm, "install").Run()
 			if jsStatus.err == nil {
 				jsStatus.status = "done"
 				jsStatus.done = true
