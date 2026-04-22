@@ -1,16 +1,20 @@
 package generator
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	cli "github.com/velocitykode/velocity-cli"
@@ -295,7 +299,96 @@ func reinitGitRepo(projectPath string) error {
 	return nil
 }
 
-// installDependencies runs go mod tidy and bun install in parallel
+// depStatus is the live state of a single dependency install task.
+// All fields are protected by mu so the render loop and the streaming
+// goroutines can touch it without racing.
+type depStatus struct {
+	mu     sync.Mutex
+	name   string
+	status string
+	done   bool
+	err    error
+}
+
+func (s *depStatus) snapshot() (name, status string, done bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.name, s.status, s.done
+}
+
+func (s *depStatus) setStatus(v string) {
+	s.mu.Lock()
+	s.status = v
+	s.mu.Unlock()
+}
+
+func (s *depStatus) markDone(success bool, err error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.err = err
+	s.done = success
+	if success {
+		s.status = "done"
+	} else {
+		s.status = "failed"
+	}
+}
+
+var ansiRE = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+// tailLine turns a raw output line into a status-bar-friendly string:
+// strips ANSI, collapses whitespace, truncates to n printable chars.
+func tailLine(s string, n int) string {
+	s = ansiRE.ReplaceAllString(s, "")
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return s
+	}
+	runes := []rune(s)
+	if len(runes) <= n {
+		return string(runes)
+	}
+	return string(runes[:n-1]) + "…"
+}
+
+// runWithStreamedStatus runs cmd and streams its stdout+stderr into
+// status.setStatus line by line. Blocks until the command exits.
+func runWithStreamedStatus(cmd *exec.Cmd, status *depStatus) error {
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	var wg sync.WaitGroup
+	scan := func(r io.Reader) {
+		defer wg.Done()
+		sc := bufio.NewScanner(r)
+		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+		for sc.Scan() {
+			line := tailLine(sc.Text(), 72)
+			if line != "" {
+				status.setStatus(line)
+			}
+		}
+	}
+	wg.Add(2)
+	go scan(stdout)
+	go scan(stderr)
+
+	waitErr := cmd.Wait()
+	wg.Wait()
+	return waitErr
+}
+
+// installDependencies runs go mod tidy and bun/npm install in parallel,
+// rendering their latest output line as the tree status roughly every 100ms.
 func installDependencies(projectPath string, apiOnly bool) error {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
@@ -306,26 +399,20 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	os.Chdir(absPath)
 	defer os.Chdir(originalDir)
 
-	// Track status
-	type depStatus struct {
-		name   string
-		status string
-		done   bool
-		err    error
-	}
-
-	goStatus := &depStatus{name: "Go dependencies", status: "downloading..."}
-	jsStatus := &depStatus{name: "JS dependencies", status: "downloading..."}
+	goStatus := &depStatus{name: "Go dependencies", status: "downloading…"}
+	jsStatus := &depStatus{name: "JS dependencies", status: "downloading…"}
 
 	// Print initial tree (skip JS for API-only projects). Hot reload now ships
 	// inside the vel binary via `./vel serve`, so no external watcher install.
 	printDepTree := func() {
+		n1, s1, d1 := goStatus.snapshot()
 		if apiOnly {
-			ui.TreeItem("└─", goStatus.name, goStatus.status, goStatus.done)
-		} else {
-			ui.TreeItem("├─", goStatus.name, goStatus.status, goStatus.done)
-			ui.TreeItem("└─", jsStatus.name, jsStatus.status, jsStatus.done)
+			ui.TreeItem("└─", n1, s1, d1)
+			return
 		}
+		n2, s2, d2 := jsStatus.snapshot()
+		ui.TreeItem("├─", n1, s1, d1)
+		ui.TreeItem("└─", n2, s2, d2)
 	}
 
 	printDepTree()
@@ -341,13 +428,9 @@ func installDependencies(projectPath string, apiOnly bool) error {
 
 	// Go dependencies
 	go func() {
-		goStatus.err = exec.Command("go", "mod", "tidy").Run()
-		if goStatus.err == nil {
-			goStatus.status = "done"
-			goStatus.done = true
-		} else {
-			goStatus.status = "failed"
-		}
+		cmd := exec.Command("go", "mod", "tidy")
+		err := runWithStreamedStatus(cmd, goStatus)
+		goStatus.markDone(err == nil, err)
 		done <- true
 	}()
 
@@ -360,27 +443,29 @@ func installDependencies(projectPath string, apiOnly bool) error {
 			} else if _, err := exec.LookPath("npm"); err == nil {
 				pm = "npm"
 			} else {
-				jsStatus.err = fmt.Errorf("neither bun nor npm was found in PATH")
-				jsStatus.status = "failed"
+				jsStatus.markDone(false, fmt.Errorf("neither bun nor npm was found in PATH"))
 				done <- true
 				return
 			}
-			jsStatus.err = exec.Command(pm, "install").Run()
-			if jsStatus.err == nil {
-				jsStatus.status = "done"
-				jsStatus.done = true
-			} else {
-				jsStatus.status = "failed"
-			}
+			cmd := exec.Command(pm, "install")
+			err := runWithStreamedStatus(cmd, jsStatus)
+			jsStatus.markDone(err == nil, err)
 			done <- true
 		}()
 	}
 
-	// Wait for all to complete, updating display
+	// Wait for all to complete, redrawing the tree on each completion
+	// and every 100ms so streamed status lines are visible in real time.
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
 	completed := 0
 	for completed < numTasks {
-		<-done
-		completed++
+		select {
+		case <-done:
+			completed++
+		case <-ticker.C:
+		}
 		ui.ClearLines(linesToClear)
 		printDepTree()
 	}
