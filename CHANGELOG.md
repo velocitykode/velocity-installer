@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.5] - 2026-04-22
+
+### Fixed
+- use cli.Tip for the bun install hint
+
 ## [0.17.4] - 2026-04-22
 
 ### Fixed
