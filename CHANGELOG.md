@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.1] - 2026-04-22
+
+### Changed
+- perf(generator): download template as tarball and build vel in parallel
+
 ## [0.17.0] - 2026-04-22
 
 ### Added
