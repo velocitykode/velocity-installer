@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.14.31] - 2026-04-22
+
+### Fixed
+- detect bun/npm availability before install
+
 ## [0.14.30] - 2026-04-21
 
 ### Fixed
