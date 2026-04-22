@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.2] - 2026-04-22
+
+### Fixed
+- generate AUTH_JWT_SECRET to match framework env name
+
 ## [0.17.1] - 2026-04-22
 
 ### Changed
