@@ -346,9 +346,11 @@ var (
 	bunAddRE     = regexp.MustCompile(`^\+\s+(\S+)`)
 )
 
-// parsePackageLine pulls a human-readable "pkg ver" out of the common
-// per-package output lines emitted by go/bun. Returns "" for lines we
-// don't recognize (chatter, summaries, progress bars, etc.).
+// parsePackageLine normalizes an output line for display. Known
+// per-package formats (go: downloading ..., + pkg@ver) are cleaned
+// up; unrecognized lines fall through as-is so the user still sees
+// activity (e.g. bun's "Resolving dependencies" during slow phases).
+// Returns "" only for blank lines.
 func parsePackageLine(raw string) string {
 	line := ansiRE.ReplaceAllString(raw, "")
 	line = strings.TrimSpace(line)
@@ -361,7 +363,7 @@ func parsePackageLine(raw string) string {
 	if m := bunAddRE.FindStringSubmatch(line); m != nil {
 		return m[1]
 	}
-	return ""
+	return line
 }
 
 // runWithStreamedStatus runs cmd and streams its stdout+stderr through
