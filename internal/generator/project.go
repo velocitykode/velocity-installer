@@ -903,22 +903,49 @@ func upsertEnvLine(envPath, key, value string) error {
 }
 
 // applySSROption wires the --ssr flag into the generated project.
-// SSR is strictly opt-in: without --ssr the installer leaves every
-// SSR-related config untouched (the template ships with Inertia Vite
-// plugin's v3 defaults). With --ssr we enable INERTIA_SSR_ENABLED in
-// .env and point the URL at Vite's dev endpoint, so the scaffold is
-// serving SSR out of the box.
+//
+// With --ssr: enable INERTIA_SSR_ENABLED in .env and point the URL at
+// Vite's dev endpoint, so the scaffold serves SSR out of the box.
+//
+// Without --ssr: patch vite.config.ts so the @inertiajs/vite plugin
+// skips its dev-server warmup. The plugin otherwise logs
+// "Inertia SSR module graph warmed up" on every `vel serve` even
+// when the Go backend has SSR disabled, which is confusing for users
+// who explicitly opted out.
 func applySSROption(config ProjectConfig, absPath string) error {
-	if !config.SSR || config.API {
+	if config.API {
 		return nil
 	}
 
-	cmd := exec.Command("sh", "-c", fmt.Sprintf(
-		"cd '%s' && sed -E 's|^# *INERTIA_SSR_ENABLED=.*|INERTIA_SSR_ENABLED=true|; s|^# *INERTIA_SSR_URL=.*|INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *INERTIA_SSR_TIMEOUT=.*|INERTIA_SSR_TIMEOUT=3s|' .env > .env.tmp && mv .env.tmp .env",
-		absPath,
-	))
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("enable ssr in .env: %w", err)
+	if config.SSR {
+		cmd := exec.Command("sh", "-c", fmt.Sprintf(
+			"cd '%s' && sed -E 's|^# *INERTIA_SSR_ENABLED=.*|INERTIA_SSR_ENABLED=true|; s|^# *INERTIA_SSR_URL=.*|INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *INERTIA_SSR_TIMEOUT=.*|INERTIA_SSR_TIMEOUT=3s|' .env > .env.tmp && mv .env.tmp .env",
+			absPath,
+		))
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("enable ssr in .env: %w", err)
+		}
+		return nil
+	}
+
+	// SSR off — splice `ssr: false,` into the inertia() plugin options.
+	vitePath := filepath.Join(absPath, "vite.config.ts")
+	src, err := os.ReadFile(vitePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read vite.config.ts: %w", err)
+	}
+	// Template style is 8-space indent for `inertia({` and 12-space
+	// indent for options inside it (see velocity-template/vite.config.ts).
+	out := strings.Replace(string(src), "inertia({", "inertia({\n            ssr: false,", 1)
+	if out == string(src) {
+		// No inertia() call — template structure changed, skip quietly.
+		return nil
+	}
+	if err := os.WriteFile(vitePath, []byte(out), 0o644); err != nil {
+		return fmt.Errorf("write vite.config.ts: %w", err)
 	}
 	return nil
 }
