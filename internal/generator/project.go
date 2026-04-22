@@ -530,7 +530,7 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	// Printing before the tree so it stays above the in-place redraws.
 	if !apiOnly {
 		if _, err := exec.LookPath("bun"); err != nil {
-			cli.Info("Tip: install bun for much faster JS installs → https://bun.sh")
+			cli.Tip("Install bun for much faster JS installs → https://bun.sh")
 		}
 	}
 
