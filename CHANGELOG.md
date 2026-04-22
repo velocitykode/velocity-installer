@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.3] - 2026-04-22
+
+### Fixed
+- silence inertia vite SSR warmup when --ssr is off
+
 ## [0.17.2] - 2026-04-22
 
 ### Fixed
