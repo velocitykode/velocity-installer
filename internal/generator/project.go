@@ -1,7 +1,9 @@
 package generator
 
 import (
+	"archive/tar"
 	"bufio"
+	"compress/gzip"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
@@ -120,20 +122,12 @@ func CreateProject(config ProjectConfig) error {
 
 	cli.Newline()
 	cli.Info("Installing dependencies")
+	// installDependencies now also runs `go build -o vel .` concurrently
+	// with the JS install. APP_KEY is already written to .env by
+	// createEnvFiles, so `./vel` can bootstrap cleanly.
 	if err := installDependencies(config.Name, config.API); err != nil {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
-
-	// Build the project-local vel binary. Downstream runtime steps
-	// (migrate, serve) shell out to this binary so framework updates
-	// flow through automatically. APP_KEY is already written to .env
-	// by createEnvFiles, so `./vel` can bootstrap cleanly.
-	cli.Newline()
-	cli.Info("Building vel")
-	if err := buildVel(config.Name); err != nil {
-		return fmt.Errorf("failed to build vel: %w", err)
-	}
-	cli.Success("Built ./vel")
 
 	cli.Newline()
 	ready, err := ensureDatabaseReady(config.Name)
@@ -156,22 +150,6 @@ func CreateProject(config ProjectConfig) error {
 	return nil
 }
 
-// buildVel compiles the project's vel binary. Downstream steps (key:generate,
-// migrate, serve) shell out to this binary, so every user-visible action
-// flows through the framework's own console commands.
-func buildVel(projectPath string) error {
-	absPath, err := filepath.Abs(projectPath)
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command("go", "build", "-o", "vel", ".")
-	cmd.Dir = absPath
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("%w: %s", err, strings.TrimSpace(string(out)))
-	}
-	return nil
-}
-
 // runVel invokes the project's own vel binary with the given args and
 // streams its output through so the framework's console UI stays intact.
 func runVel(projectPath string, args ...string) error {
@@ -191,21 +169,108 @@ func runVel(projectPath string, args ...string) error {
 // reachable). Callers should treat this as a non-fatal outcome.
 var ErrMigrationsSkipped = errors.New("migrations skipped: database not ready")
 
-// cloneTemplate clones the appropriate velocity template
+// cloneTemplate downloads and extracts the appropriate velocity template
+// as a tarball from GitHub. Faster than git clone (no .git/ payload, no
+// pack-file assembly) and the template's git history is discarded by
+// reinitGitRepo anyway, so nothing is lost. Falls back to git clone when
+// the HTTP fetch fails (corporate proxy, offline mirror, etc.).
 func cloneTemplate(projectName string, apiOnly bool) error {
 	templateRepo := "velocity-template"
 	if apiOnly {
 		templateRepo = "velocity-template-api"
 	}
 
-	// Use git clone directly (gh repo clone can use stale cache)
+	if err := downloadTemplateTarball(templateRepo, projectName); err == nil {
+		return nil
+	}
+
+	// Fallback: git clone (keeps the tool working in environments that
+	// block codeload.github.com but allow ssh/https git).
 	cmd := exec.Command("git", "clone", "--depth=1", "git@github.com:velocitykode/"+templateRepo+".git", projectName)
+	if err := cmd.Run(); err == nil {
+		return nil
+	}
+	cmd = exec.Command("git", "clone", "--depth=1", "https://github.com/velocitykode/"+templateRepo+".git", projectName)
 	if err := cmd.Run(); err != nil {
-		// Try HTTPS fallback
-		cmd = exec.Command("git", "clone", "--depth=1", "https://github.com/velocitykode/"+templateRepo+".git", projectName)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to clone template: %w", err)
+		return fmt.Errorf("failed to fetch template (tarball and git clone both failed): %w", err)
+	}
+	return nil
+}
+
+// downloadTemplateTarball streams codeload.github.com's .tar.gz of the
+// template's main branch into projectName, stripping the single top-level
+// directory that GitHub wraps every tarball in.
+func downloadTemplateTarball(repo, projectName string) error {
+	url := fmt.Sprintf("https://codeload.github.com/velocitykode/%s/tar.gz/refs/heads/main", repo)
+	client := &http.Client{Timeout: 60 * time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("tarball fetch: HTTP %d", resp.StatusCode)
+	}
+
+	gz, err := gzip.NewReader(resp.Body)
+	if err != nil {
+		return err
+	}
+	defer gz.Close()
+
+	if err := os.MkdirAll(projectName, 0o755); err != nil {
+		return err
+	}
+	root, err := filepath.Abs(projectName)
+	if err != nil {
+		return err
+	}
+
+	tr := tar.NewReader(gz)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			break
 		}
+		if err != nil {
+			return err
+		}
+
+		// Strip the single leading directory GitHub wraps tarballs in
+		// (e.g. "velocity-template-main/"). Skip the top-level entry.
+		parts := strings.SplitN(hdr.Name, "/", 2)
+		if len(parts) < 2 || parts[1] == "" {
+			continue
+		}
+		dest := filepath.Join(root, parts[1])
+
+		// Path traversal guard: every entry must stay inside root.
+		if !strings.HasPrefix(dest, root+string(os.PathSeparator)) && dest != root {
+			return fmt.Errorf("refusing tar entry outside project dir: %s", hdr.Name)
+		}
+
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(dest, 0o755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(dest, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, os.FileMode(hdr.Mode)&0o777)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			if err := f.Close(); err != nil {
+				return err
+			}
+		}
+		// Symlinks, char/block devices, etc. are intentionally skipped.
 	}
 	return nil
 }
@@ -459,6 +524,7 @@ func installDependencies(projectPath string, apiOnly bool) error {
 
 	goGroup := &depGroup{name: "Go dependencies"}
 	jsGroup := &depGroup{name: "JS dependencies"}
+	velGroup := &depGroup{name: "Build vel"}
 
 	// If we're going to fall back to npm, tell the user about bun first.
 	// Printing before the tree so it stays above the in-place redraws.
@@ -468,35 +534,60 @@ func installDependencies(projectPath string, apiOnly bool) error {
 		}
 	}
 
-	// Hot reload now ships inside the vel binary via `./vel serve`, so
-	// no external watcher install.
+	// Tree layout:
+	//   api-only: Go deps + Build vel
+	//   full:     Go deps + JS deps + Build vel
+	// Go build has no filesystem dependency on node_modules, so the vel
+	// build runs concurrently with bun/npm install once `go mod tidy`
+	// has finished writing go.sum.
 	printDepTree := func() int {
 		lines := 0
 		n1, t1, c1, d1 := goGroup.snapshot()
 		if apiOnly {
-			lines += renderGroup("└─", n1, t1, c1, d1, false)
+			lines += renderGroup("├─", n1, t1, c1, d1, true)
+			nV, tV, cV, dV := velGroup.snapshot()
+			lines += renderGroup("└─", nV, tV, cV, dV, false)
 			return lines
 		}
 		lines += renderGroup("├─", n1, t1, c1, d1, true)
 		n2, t2, c2, d2 := jsGroup.snapshot()
-		lines += renderGroup("└─", n2, t2, c2, d2, false)
+		lines += renderGroup("├─", n2, t2, c2, d2, true)
+		nV, tV, cV, dV := velGroup.snapshot()
+		lines += renderGroup("└─", nV, tV, cV, dV, false)
 		return lines
 	}
 
 	linesPrinted := printDepTree()
 
+	// Tasks: Go deps, Build vel, (optionally) JS deps
 	numTasks := 2
-	if apiOnly {
-		numTasks = 1
+	if !apiOnly {
+		numTasks = 3
 	}
 
 	done := make(chan bool, numTasks)
+	goFinished := make(chan error, 1)
 
-	// Go dependencies
+	// Go dependencies — signals goFinished so the vel build can start.
 	go func() {
 		cmd := exec.Command("go", "mod", "tidy")
 		err := runWithStreamedStatus(cmd, goGroup)
 		goGroup.markDone(err == nil, err)
+		goFinished <- err
+		done <- true
+	}()
+
+	// Build vel — waits for `go mod tidy` so go.sum is consistent, then
+	// compiles concurrently with the still-running JS install.
+	go func() {
+		if err := <-goFinished; err != nil {
+			velGroup.markDone(false, fmt.Errorf("skipped: go deps failed"))
+			done <- true
+			return
+		}
+		cmd := exec.Command("go", "build", "-o", "vel", ".")
+		err := runWithStreamedStatus(cmd, velGroup)
+		velGroup.markDone(err == nil, err)
 		done <- true
 	}()
 
@@ -539,6 +630,9 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	}
 	if !apiOnly && jsGroup.err != nil {
 		return jsGroup.err
+	}
+	if velGroup.err != nil {
+		return velGroup.err
 	}
 
 	return nil
