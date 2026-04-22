@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.1] - 2026-04-22
+
+### Fixed
+- show raw tool output when no package pattern matches
+
 ## [0.16.0] - 2026-04-22
 
 ### Added
