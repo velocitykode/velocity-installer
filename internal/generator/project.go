@@ -299,61 +299,74 @@ func reinitGitRepo(projectPath string) error {
 	return nil
 }
 
-// depStatus is the live state of a single dependency install task.
+// depGroup is the live state of a single dependency install task, as
+// displayed in the tree. tail holds the most recent N parsed package
+// names so the user sees deps ticking past under each group header.
 // All fields are protected by mu so the render loop and the streaming
-// goroutines can touch it without racing.
-type depStatus struct {
-	mu     sync.Mutex
-	name   string
-	status string
-	done   bool
-	err    error
+// goroutines can touch them without racing.
+type depGroup struct {
+	mu    sync.Mutex
+	name  string
+	tail  []string
+	count int
+	done  bool
+	err   error
 }
 
-func (s *depStatus) snapshot() (name, status string, done bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.name, s.status, s.done
+const depTailMax = 5
+
+func (g *depGroup) snapshot() (name string, tail []string, count int, done bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	t := make([]string, len(g.tail))
+	copy(t, g.tail)
+	return g.name, t, g.count, g.done
 }
 
-func (s *depStatus) setStatus(v string) {
-	s.mu.Lock()
-	s.status = v
-	s.mu.Unlock()
-}
-
-func (s *depStatus) markDone(success bool, err error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.err = err
-	s.done = success
-	if success {
-		s.status = "done"
-	} else {
-		s.status = "failed"
+func (g *depGroup) push(pkg string) {
+	g.mu.Lock()
+	g.tail = append(g.tail, pkg)
+	if len(g.tail) > depTailMax {
+		g.tail = g.tail[len(g.tail)-depTailMax:]
 	}
+	g.count++
+	g.mu.Unlock()
 }
 
-var ansiRE = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
-
-// tailLine turns a raw output line into a status-bar-friendly string:
-// strips ANSI, collapses whitespace, truncates to n printable chars.
-func tailLine(s string, n int) string {
-	s = ansiRE.ReplaceAllString(s, "")
-	s = strings.TrimSpace(s)
-	if s == "" {
-		return s
-	}
-	runes := []rune(s)
-	if len(runes) <= n {
-		return string(runes)
-	}
-	return string(runes[:n-1]) + "…"
+func (g *depGroup) markDone(success bool, err error) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.err = err
+	g.done = success
 }
 
-// runWithStreamedStatus runs cmd and streams its stdout+stderr into
-// status.setStatus line by line. Blocks until the command exits.
-func runWithStreamedStatus(cmd *exec.Cmd, status *depStatus) error {
+var (
+	ansiRE       = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+	goDownloadRE = regexp.MustCompile(`^go: downloading (\S+) (\S+)`)
+	bunAddRE     = regexp.MustCompile(`^\+\s+(\S+)`)
+)
+
+// parsePackageLine pulls a human-readable "pkg ver" out of the common
+// per-package output lines emitted by go/bun. Returns "" for lines we
+// don't recognize (chatter, summaries, progress bars, etc.).
+func parsePackageLine(raw string) string {
+	line := ansiRE.ReplaceAllString(raw, "")
+	line = strings.TrimSpace(line)
+	if line == "" {
+		return ""
+	}
+	if m := goDownloadRE.FindStringSubmatch(line); m != nil {
+		return m[1] + " " + m[2]
+	}
+	if m := bunAddRE.FindStringSubmatch(line); m != nil {
+		return m[1]
+	}
+	return ""
+}
+
+// runWithStreamedStatus runs cmd and streams its stdout+stderr through
+// parsePackageLine into group.push. Blocks until the command exits.
+func runWithStreamedStatus(cmd *exec.Cmd, group *depGroup) error {
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -372,9 +385,8 @@ func runWithStreamedStatus(cmd *exec.Cmd, status *depStatus) error {
 		sc := bufio.NewScanner(r)
 		sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 		for sc.Scan() {
-			line := tailLine(sc.Text(), 72)
-			if line != "" {
-				status.setStatus(line)
+			if pkg := parsePackageLine(sc.Text()); pkg != "" {
+				group.push(pkg)
 			}
 		}
 	}
@@ -387,8 +399,52 @@ func runWithStreamedStatus(cmd *exec.Cmd, status *depStatus) error {
 	return waitErr
 }
 
+// renderGroup prints a single group (header + tail sub-lines) and
+// returns the number of terminal lines written. withPipe controls
+// whether the sub-lines use a │ continuation (for non-last groups).
+func renderGroup(prefix, name string, tail []string, count int, done bool, withPipe bool) int {
+	status := "downloading…"
+	if done {
+		if count == 0 {
+			status = "done"
+		} else {
+			status = fmt.Sprintf("done (%d packages)", count)
+		}
+	} else if count > 0 {
+		status = fmt.Sprintf("downloading… (%d so far)", count)
+	}
+	ui.TreeItem(prefix, name, status, done)
+	lines := 1
+
+	if done {
+		return lines
+	}
+
+	childPrefix := "    "
+	if withPipe {
+		childPrefix = "│   "
+	}
+	for _, pkg := range tail {
+		fmt.Printf("  %s %s %s\n",
+			cli.StyleMuted(childPrefix),
+			cli.StyleMuted("•"),
+			cli.StyleMuted(truncate(pkg, 68)),
+		)
+		lines++
+	}
+	return lines
+}
+
+func truncate(s string, n int) string {
+	runes := []rune(s)
+	if len(runes) <= n {
+		return s
+	}
+	return string(runes[:n-1]) + "…"
+}
+
 // installDependencies runs go mod tidy and bun/npm install in parallel,
-// rendering their latest output line as the tree status roughly every 100ms.
+// rendering each resolved package under its group in real time.
 func installDependencies(projectPath string, apiOnly bool) error {
 	absPath, err := filepath.Abs(projectPath)
 	if err != nil {
@@ -399,29 +455,29 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	os.Chdir(absPath)
 	defer os.Chdir(originalDir)
 
-	goStatus := &depStatus{name: "Go dependencies", status: "downloading…"}
-	jsStatus := &depStatus{name: "JS dependencies", status: "downloading…"}
+	goGroup := &depGroup{name: "Go dependencies"}
+	jsGroup := &depGroup{name: "JS dependencies"}
 
-	// Print initial tree (skip JS for API-only projects). Hot reload now ships
-	// inside the vel binary via `./vel serve`, so no external watcher install.
-	printDepTree := func() {
-		n1, s1, d1 := goStatus.snapshot()
+	// Hot reload now ships inside the vel binary via `./vel serve`, so
+	// no external watcher install.
+	printDepTree := func() int {
+		lines := 0
+		n1, t1, c1, d1 := goGroup.snapshot()
 		if apiOnly {
-			ui.TreeItem("└─", n1, s1, d1)
-			return
+			lines += renderGroup("└─", n1, t1, c1, d1, false)
+			return lines
 		}
-		n2, s2, d2 := jsStatus.snapshot()
-		ui.TreeItem("├─", n1, s1, d1)
-		ui.TreeItem("└─", n2, s2, d2)
+		lines += renderGroup("├─", n1, t1, c1, d1, true)
+		n2, t2, c2, d2 := jsGroup.snapshot()
+		lines += renderGroup("└─", n2, t2, c2, d2, false)
+		return lines
 	}
 
-	printDepTree()
+	linesPrinted := printDepTree()
 
 	numTasks := 2
-	linesToClear := 2
 	if apiOnly {
 		numTasks = 1
-		linesToClear = 1
 	}
 
 	done := make(chan bool, numTasks)
@@ -429,8 +485,8 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	// Go dependencies
 	go func() {
 		cmd := exec.Command("go", "mod", "tidy")
-		err := runWithStreamedStatus(cmd, goStatus)
-		goStatus.markDone(err == nil, err)
+		err := runWithStreamedStatus(cmd, goGroup)
+		goGroup.markDone(err == nil, err)
 		done <- true
 	}()
 
@@ -443,19 +499,17 @@ func installDependencies(projectPath string, apiOnly bool) error {
 			} else if _, err := exec.LookPath("npm"); err == nil {
 				pm = "npm"
 			} else {
-				jsStatus.markDone(false, fmt.Errorf("neither bun nor npm was found in PATH"))
+				jsGroup.markDone(false, fmt.Errorf("neither bun nor npm was found in PATH"))
 				done <- true
 				return
 			}
 			cmd := exec.Command(pm, "install")
-			err := runWithStreamedStatus(cmd, jsStatus)
-			jsStatus.markDone(err == nil, err)
+			err := runWithStreamedStatus(cmd, jsGroup)
+			jsGroup.markDone(err == nil, err)
 			done <- true
 		}()
 	}
 
-	// Wait for all to complete, redrawing the tree on each completion
-	// and every 100ms so streamed status lines are visible in real time.
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -466,15 +520,15 @@ func installDependencies(projectPath string, apiOnly bool) error {
 			completed++
 		case <-ticker.C:
 		}
-		ui.ClearLines(linesToClear)
-		printDepTree()
+		ui.ClearLines(linesPrinted)
+		linesPrinted = printDepTree()
 	}
 
-	if goStatus.err != nil {
-		return goStatus.err
+	if goGroup.err != nil {
+		return goGroup.err
 	}
-	if !apiOnly && jsStatus.err != nil {
-		return jsStatus.err
+	if !apiOnly && jsGroup.err != nil {
+		return jsGroup.err
 	}
 
 	return nil
