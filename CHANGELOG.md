@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.16.0] - 2026-04-22
+
+### Added
+- show each dep under its group as it installs
+
 ## [0.15.0] - 2026-04-22
 
 ### Added
