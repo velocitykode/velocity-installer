@@ -559,11 +559,11 @@ CACHE_DRIVER=memory
 					t.Error(".env should pass CRYPTO_KEY through from .env.example unchanged")
 				}
 
-				// APP_KEY, QUEUE_SIGNING_KEY, JWT_SECRET must all be
-				// written so the framework has everything it needs at
-				// bootstrap. Each should be a 44-char base64 value
+				// APP_KEY, QUEUE_SIGNING_KEY, AUTH_JWT_SECRET must all
+				// be written so the framework has everything it needs
+				// at bootstrap. Each should be a 44-char base64 value
 				// (32 random bytes, standard encoding with padding).
-				for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "JWT_SECRET"} {
+				for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "AUTH_JWT_SECRET"} {
 					var match string
 					for _, line := range strings.Split(envStr, "\n") {
 						if strings.HasPrefix(line, envKey+"=") {

@@ -805,14 +805,18 @@ func createEnvFiles(config ProjectConfig) error {
 		return err
 	}
 
-	// Generate APP_KEY, QUEUE_SIGNING_KEY, and JWT_SECRET using the same
-	// scheme as the framework's console.KeyGenerate (crypto/rand 32
+	// Generate APP_KEY, QUEUE_SIGNING_KEY, and AUTH_JWT_SECRET using the
+	// same scheme as the framework's console.KeyGenerate (crypto/rand 32
 	// bytes, base64 encoded). Separate keys per domain so crypto, queue
-	// signing, and JWT auth never share the same key material. Write
-	// via a Go helper instead of sed because sed can't append a missing
-	// line.
+	// signing, and JWT auth never share the same key material. Write via
+	// a Go helper instead of sed because sed can't append a missing line.
+	//
+	// AUTH_JWT_SECRET must match the env var the framework reads
+	// (velocity/config.go:288); an unconfigured JWT guard emits a boot
+	// warning and is skipped, so shipping a scaffold with the key already
+	// set makes the built-in guard work out of the box.
 	envPath := filepath.Join(absPath, ".env")
-	for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "JWT_SECRET"} {
+	for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "AUTH_JWT_SECRET"} {
 		value, err := generateKey()
 		if err != nil {
 			return fmt.Errorf("generate %s: %w", envKey, err)
@@ -870,7 +874,7 @@ func createEnvFiles(config ProjectConfig) error {
 
 // generateKey mirrors velocity/console.KeyGenerate - 32 crypto/rand
 // bytes, standard-base64 encoded. Used for APP_KEY, QUEUE_SIGNING_KEY,
-// and JWT_SECRET; the framework reads each raw (no prefix).
+// and AUTH_JWT_SECRET.
 func generateKey() (string, error) {
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
