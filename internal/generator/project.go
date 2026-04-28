@@ -26,10 +26,21 @@ import (
 // Fallback version if GitHub API is unavailable
 const fallbackVelocityVersion = "v0.20.3"
 
-// getLatestVelocityVersion fetches the latest release tag from GitHub
+// semverTagRE matches plain semver-style tags (vX.Y.Z) - pre-releases
+// like vX.Y.Z-rc1 are excluded so the installer never picks an
+// unfinished tag.
+var semverTagRE = regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)$`)
+
+// getLatestVelocityVersion fetches the highest semver tag from the
+// velocity repo. Tags are the source of truth - GitHub Releases are
+// ceremonial and may lag (or never be created). Filtering to vX.Y.Z
+// also guards against draft/pre-release tags.
 func getLatestVelocityVersion() string {
 	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get("https://api.github.com/repos/velocitykode/velocity/releases/latest")
+	// 100 tags is the per-page max; the auto-release cadence makes
+	// the latest plain semver tag fall comfortably inside the first
+	// page, even when patch releases stack up.
+	resp, err := client.Get("https://api.github.com/repos/velocitykode/velocity/tags?per_page=100")
 	if err != nil {
 		return fallbackVelocityVersion
 	}
@@ -39,18 +50,53 @@ func getLatestVelocityVersion() string {
 		return fallbackVelocityVersion
 	}
 
-	var release struct {
-		TagName string `json:"tag_name"`
+	var tags []struct {
+		Name string `json:"name"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
 		return fallbackVelocityVersion
 	}
 
-	if release.TagName == "" {
-		return fallbackVelocityVersion
+	names := make([]string, 0, len(tags))
+	for _, t := range tags {
+		names = append(names, t.Name)
 	}
+	if best := pickHighestSemverTag(names); best != "" {
+		return best
+	}
+	return fallbackVelocityVersion
+}
 
-	return release.TagName
+// pickHighestSemverTag returns the highest vX.Y.Z tag from names, or
+// "" if none qualifies. Pre-release suffixes (-rc1, -beta) are
+// excluded so an unfinished tag never wins.
+func pickHighestSemverTag(names []string) string {
+	var bestName string
+	var bestMajor, bestMinor, bestPatch int
+	for _, name := range names {
+		m := semverTagRE.FindStringSubmatch(name)
+		if m == nil {
+			continue
+		}
+		major, minor, patch := atoi(m[1]), atoi(m[2]), atoi(m[3])
+		if bestName == "" ||
+			major > bestMajor ||
+			(major == bestMajor && minor > bestMinor) ||
+			(major == bestMajor && minor == bestMinor && patch > bestPatch) {
+			bestName, bestMajor, bestMinor, bestPatch = name, major, minor, patch
+		}
+	}
+	return bestName
+}
+
+// atoi parses a regex-captured digit group. The regex guarantees a
+// digits-only match so strconv-style error handling is unnecessary.
+func atoi(s string) int {
+	n := 0
+	for _, c := range s {
+		n = n*10 + int(c-'0')
+	}
+	return n
 }
 
 // ProjectConfig holds the configuration for a new project
@@ -716,8 +762,12 @@ func initGoModule(config ProjectConfig) error {
 		cmd.Run()
 		cli.Info("Using local Velocity framework")
 	} else {
-		// Try to get from GitHub (requires GOPRIVATE setup for private repos)
-		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@v0.20.3")
+		// Try to get from GitHub (requires GOPRIVATE setup for private repos).
+		// Use getLatestVelocityVersion so re-init/repair flows track the
+		// same tag the new-project flow does, instead of pinning a stale
+		// hardcoded version.
+		velocityVersion := getLatestVelocityVersion()
+		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@"+velocityVersion)
 		if err := cmd.Run(); err != nil {
 			cli.Warning("Note: Configure GOPRIVATE for private repo access")
 		}
