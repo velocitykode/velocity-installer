@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.17.9] - 2026-04-28
+
+### Fixed
+- resolve framework version from tags, not GitHub Releases
+
 ## [0.17.8] - 2026-04-28
 
 ## [0.17.7] - 2026-04-28
