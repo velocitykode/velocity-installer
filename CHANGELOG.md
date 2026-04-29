@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.1] - 2026-04-29
+
+### Fixed
+- align config stub and wizard hint with APP_PORT env
+
 ## [0.18.0] - 2026-04-29
 
 ### Added
