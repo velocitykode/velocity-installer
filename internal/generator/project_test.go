@@ -1301,7 +1301,7 @@ func TestGetTemplateRepo(t *testing.T) {
 		{
 			name:     "full-stack template when api is false",
 			apiOnly:  false,
-			wantRepo: "velocity-template",
+			wantRepo: "velocity-template-react",
 		},
 		{
 			name:     "api template when api is true",
@@ -1312,7 +1312,7 @@ func TestGetTemplateRepo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := "velocity-template"
+			repo := "velocity-template-react"
 			if tt.apiOnly {
 				repo = "velocity-template-api"
 			}

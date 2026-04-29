@@ -221,7 +221,7 @@ var ErrMigrationsSkipped = errors.New("migrations skipped: database not ready")
 // reinitGitRepo anyway, so nothing is lost. Falls back to git clone when
 // the HTTP fetch fails (corporate proxy, offline mirror, etc.).
 func cloneTemplate(projectName string, apiOnly bool) error {
-	templateRepo := "velocity-template"
+	templateRepo := "velocity-template-react"
 	if apiOnly {
 		templateRepo = "velocity-template-api"
 	}
@@ -283,7 +283,7 @@ func downloadTemplateTarball(repo, projectName string) error {
 		}
 
 		// Strip the single leading directory GitHub wraps tarballs in
-		// (e.g. "velocity-template-main/"). Skip the top-level entry.
+		// (e.g. "velocity-template-react-main/"). Skip the top-level entry.
 		parts := strings.SplitN(hdr.Name, "/", 2)
 		if len(parts) < 2 || parts[1] == "" {
 			continue
@@ -988,7 +988,7 @@ func applySSROption(config ProjectConfig, absPath string) error {
 		return fmt.Errorf("read vite.config.ts: %w", err)
 	}
 	// Template style is 8-space indent for `inertia({` and 12-space
-	// indent for options inside it (see velocity-template/vite.config.ts).
+	// indent for options inside it (see velocity-template-react/vite.config.ts).
 	out := strings.Replace(string(src), "inertia({", "inertia({\n            ssr: false,", 1)
 	if out == string(src) {
 		// No inertia() call - template structure changed, skip quietly.
