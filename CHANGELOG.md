@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.18.0] - 2026-04-29
+
+### Added
+- --stack flag for picking React or Vue template
+
+### Fixed
+- resolve framework version from tags, not GitHub Releases
+- use cli.Tip for the bun install hint
+- bump velocity-cli to v0.14.0
+
+### Changed
+- chore: rename velocity-template -> velocity-template-react
+- chore(deps): bump velocity-cli to v0.13.1
+
 ## [0.17.8] - 2026-04-28
 
 ## [0.17.7] - 2026-04-28
