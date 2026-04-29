@@ -133,6 +133,6 @@ func showSuccess(projectName string) {
 		"cd " + projectName,
 		"go run . serve",
 	})
-	cli.Muted("Default port: 4000 (set PORT env to change)")
+	cli.Muted("Default port: 4000 (set APP_PORT env to change)")
 	cli.Newline()
 }
