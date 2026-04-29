@@ -49,6 +49,17 @@ func LaunchNewProjectWizard(projectName string) {
 		featureSet[f] = true
 	}
 
+	stack := ""
+	ssr := false
+	if !featureSet["api-only"] {
+		stack = cli.Select(
+			"Frontend stack:",
+			generator.ValidStacks,
+			cli.WithSelectDefault("react"),
+		)
+		ssr = cli.Confirm("Enable Inertia server-side rendering?", cli.WithDefaultNo())
+	}
+
 	cli.Newline()
 	cli.Bold("Review:")
 	cli.KeyValue("Project", cli.Highlight(projectName))
@@ -64,6 +75,12 @@ func LaunchNewProjectWizard(projectName string) {
 	if featureSet["api-only"] {
 		cli.KeyValue("API-only", "yes")
 	}
+	if stack != "" {
+		cli.KeyValue("Stack", stack)
+	}
+	if ssr {
+		cli.KeyValue("SSR", "yes")
+	}
 	cli.Newline()
 
 	if !cli.Confirm("Create project?", cli.WithDefaultYes()) {
@@ -78,6 +95,8 @@ func LaunchNewProjectWizard(projectName string) {
 		Cache:    cache,
 		Auth:     featureSet["auth"],
 		API:      featureSet["api-only"],
+		Stack:    stack,
+		SSR:      ssr,
 	}
 
 	if err := generator.CreateProject(config); err != nil && !errors.Is(err, generator.ErrMigrationsSkipped) {

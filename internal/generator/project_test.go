@@ -1296,28 +1296,58 @@ func TestGetTemplateRepo(t *testing.T) {
 	tests := []struct {
 		name     string
 		apiOnly  bool
+		stack    string
 		wantRepo string
 	}{
 		{
-			name:     "full-stack template when api is false",
+			name:     "react full-stack template",
 			apiOnly:  false,
+			stack:    "react",
 			wantRepo: "velocity-template-react",
 		},
 		{
-			name:     "api template when api is true",
+			name:     "vue full-stack template",
+			apiOnly:  false,
+			stack:    "vue",
+			wantRepo: "velocity-template-vue",
+		},
+		{
+			name:     "api template ignores stack",
 			apiOnly:  true,
+			stack:    "vue",
 			wantRepo: "velocity-template-api",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := "velocity-template-react"
+			repo := "velocity-template-" + tt.stack
 			if tt.apiOnly {
 				repo = "velocity-template-api"
 			}
 			if repo != tt.wantRepo {
 				t.Errorf("template repo = %q, want %q", repo, tt.wantRepo)
+			}
+		})
+	}
+}
+
+func TestValidateStack(t *testing.T) {
+	tests := []struct {
+		stack   string
+		wantErr bool
+	}{
+		{"react", false},
+		{"vue", false},
+		{"svelte", true},
+		{"", true},
+		{"REACT", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.stack, func(t *testing.T) {
+			err := validateStack(tt.stack)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("validateStack(%q) error = %v, wantErr %v", tt.stack, err, tt.wantErr)
 			}
 		})
 	}

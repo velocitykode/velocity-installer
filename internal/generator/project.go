@@ -107,6 +107,10 @@ type ProjectConfig struct {
 	Cache    string
 	Auth     bool
 	API      bool
+	// Stack selects the front-end framework for full-stack projects.
+	// Valid values: "react" (default), "vue". Ignored when API is true.
+	// Maps to velocity-template-${Stack} on GitHub.
+	Stack string
 	// SSR toggles Inertia server-side rendering in the generated app.
 	// When true the installer enables INERTIA_SSR_ENABLED=true and
 	// points INERTIA_SSR_URL at Vite's /__inertia_ssr dev endpoint.
@@ -115,11 +119,34 @@ type ProjectConfig struct {
 	SSR bool
 }
 
+// ValidStacks lists the front-end stacks the installer can scaffold.
+var ValidStacks = []string{"react", "vue"}
+
+// validateStack returns an error if stack is not in ValidStacks.
+func validateStack(stack string) error {
+	for _, s := range ValidStacks {
+		if s == stack {
+			return nil
+		}
+	}
+	return fmt.Errorf("invalid stack %q (valid: %s)", stack, strings.Join(ValidStacks, ", "))
+}
+
 // CreateProject generates a new Velocity project from template
 func CreateProject(config ProjectConfig) error {
 	// Validate project name
 	if err := validateProjectName(config.Name); err != nil {
 		return err
+	}
+
+	// Default stack for full-stack projects.
+	if !config.API && config.Stack == "" {
+		config.Stack = "react"
+	}
+	if !config.API {
+		if err := validateStack(config.Stack); err != nil {
+			return err
+		}
 	}
 
 	// Determine module name
@@ -132,7 +159,7 @@ func CreateProject(config ProjectConfig) error {
 
 	// Clone template
 	if err := cli.Spinner("Cloning template", func() error {
-		return cloneTemplate(config.Name, config.API)
+		return cloneTemplate(config.Name, config.API, config.Stack)
 	}); err != nil {
 		return fmt.Errorf("failed to clone template: %w", err)
 	}
@@ -220,8 +247,8 @@ var ErrMigrationsSkipped = errors.New("migrations skipped: database not ready")
 // pack-file assembly) and the template's git history is discarded by
 // reinitGitRepo anyway, so nothing is lost. Falls back to git clone when
 // the HTTP fetch fails (corporate proxy, offline mirror, etc.).
-func cloneTemplate(projectName string, apiOnly bool) error {
-	templateRepo := "velocity-template-react"
+func cloneTemplate(projectName string, apiOnly bool, stack string) error {
+	templateRepo := "velocity-template-" + stack
 	if apiOnly {
 		templateRepo = "velocity-template-api"
 	}

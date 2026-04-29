@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 
 	"github.com/spf13/cobra"
 	cli "github.com/velocitykode/velocity-cli"
@@ -11,10 +13,12 @@ import (
 )
 
 var (
-	database string
-	cache    string
-	api      bool
-	ssr      bool
+	database       string
+	cache          string
+	stack          string
+	api            bool
+	ssr            bool
+	nonInteractive bool
 )
 
 var NewCmd = &cobra.Command{
@@ -26,13 +30,15 @@ var NewCmd = &cobra.Command{
 		if len(args) < 1 {
 			cli.Error("Project name is required")
 			cli.Newline()
-			cli.Muted("Usage: velocity new [project-name]")
+			cli.Muted("Usage: velocity new [project-name] [flags]")
 			cli.Newline()
 			cli.Muted("Flags:")
-			cli.Muted("  --database    Database driver (postgres, sqlite)")
-			cli.Muted("  --cache       Cache driver (redis, memory)")
-			cli.Muted("  --api         Create API-only project (no frontend)")
-			cli.Muted("  --ssr         Enable Inertia server-side rendering")
+			cli.Muted("  --database         Database driver (postgres, sqlite)")
+			cli.Muted("  --cache            Cache driver (redis, memory)")
+			cli.Muted("  --api              Create API-only project (no frontend)")
+			cli.Muted("  --stack            Frontend stack for full-stack projects (react, vue)")
+			cli.Muted("  --ssr              Enable Inertia server-side rendering")
+			cli.Muted("  -y, --non-interactive  Skip all prompts; use flags or defaults")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -41,9 +47,6 @@ var NewCmd = &cobra.Command{
 		projectName := args[0]
 		cli.Header("velocity new")
 
-		// Fail fast before asking any questions - the rest of the flow
-		// (template clone, module rewrite, ...) can't recover from a
-		// pre-existing path.
 		if info, err := os.Stat(projectName); err == nil {
 			kind := "file"
 			if info.IsDir() {
@@ -57,7 +60,13 @@ var NewCmd = &cobra.Command{
 			return
 		}
 
-		if !cmd.Flags().Changed("api") {
+		// Per-flag prompt: ask only when the flag was not explicitly set
+		// AND the user did not opt into non-interactive mode.
+		ask := func(name string) bool {
+			return !nonInteractive && !cmd.Flags().Changed(name)
+		}
+
+		if ask("api") {
 			const (
 				labelFullStack = "Full stack (Inertia + Vite)"
 				labelAPI       = "API only (no frontend)"
@@ -69,7 +78,7 @@ var NewCmd = &cobra.Command{
 			) == labelAPI
 		}
 
-		if !cmd.Flags().Changed("database") {
+		if ask("database") {
 			database = cli.Select(
 				"Database:",
 				[]string{"sqlite", "postgres"},
@@ -77,8 +86,36 @@ var NewCmd = &cobra.Command{
 			)
 		}
 
-		if !api && !cmd.Flags().Changed("ssr") {
+		if ask("cache") {
+			cache = cli.Select(
+				"Cache:",
+				[]string{"memory", "redis"},
+				cli.WithSelectDefault(cache),
+			)
+		}
+
+		if !api && ask("stack") {
+			stack = cli.Select(
+				"Frontend stack:",
+				generator.ValidStacks,
+				cli.WithSelectDefault(stack),
+			)
+		}
+
+		if !api && ask("ssr") {
 			ssr = cli.Confirm("Enable Inertia server-side rendering?", cli.WithDefaultNo())
+		}
+
+		// Validate flags up-front so non-interactive mode fails fast.
+		if !api {
+			stack = strings.ToLower(strings.TrimSpace(stack))
+			if !slices.Contains(generator.ValidStacks, stack) {
+				cli.Error(fmt.Sprintf(
+					"Invalid --stack %q. Valid: %s",
+					stack, strings.Join(generator.ValidStacks, ", "),
+				))
+				return
+			}
 		}
 
 		config := generator.ProjectConfig{
@@ -87,6 +124,7 @@ var NewCmd = &cobra.Command{
 			Database: database,
 			Cache:    cache,
 			API:      api,
+			Stack:    stack,
 			SSR:      ssr,
 		}
 
@@ -127,5 +165,7 @@ func init() {
 	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, sqlite)")
 	NewCmd.Flags().StringVar(&cache, "cache", "memory", "Cache driver (redis, memory)")
 	NewCmd.Flags().BoolVar(&api, "api", false, "Create API-only project (no frontend)")
+	NewCmd.Flags().StringVar(&stack, "stack", "react", "Frontend stack for full-stack projects (react, vue)")
 	NewCmd.Flags().BoolVar(&ssr, "ssr", false, "Enable Inertia server-side rendering (sets INERTIA_SSR_ENABLED=true and wires Vite SSR)")
+	NewCmd.Flags().BoolVarP(&nonInteractive, "non-interactive", "y", false, "Skip all prompts; use flag values or defaults")
 }
