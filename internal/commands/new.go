@@ -33,7 +33,7 @@ var NewCmd = &cobra.Command{
 			cli.Muted("Usage: velocity new [project-name] [flags]")
 			cli.Newline()
 			cli.Muted("Flags:")
-			cli.Muted("  --database         Database driver (postgres, sqlite)")
+			cli.Muted("  --database         Database driver (postgres, mysql, sqlite)")
 			cli.Muted("  --cache            Cache driver (redis, memory)")
 			cli.Muted("  --api              Create API-only project (no frontend)")
 			cli.Muted("  --stack            Frontend stack for full-stack projects (react, vue)")
@@ -81,7 +81,7 @@ var NewCmd = &cobra.Command{
 		if ask("database") {
 			database = cli.Select(
 				"Database:",
-				[]string{"sqlite", "postgres"},
+				[]string{"sqlite", "postgres", "mysql"},
 				cli.WithSelectDefault(database),
 			)
 		}
@@ -162,7 +162,7 @@ var NewCmd = &cobra.Command{
 }
 
 func init() {
-	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, sqlite)")
+	NewCmd.Flags().StringVar(&database, "database", "sqlite", "Database driver (postgres, mysql, sqlite)")
 	NewCmd.Flags().StringVar(&cache, "cache", "memory", "Cache driver (redis, memory)")
 	NewCmd.Flags().BoolVar(&api, "api", false, "Create API-only project (no frontend)")
 	NewCmd.Flags().StringVar(&stack, "stack", "react", "Frontend stack for full-stack projects (react, vue)")
