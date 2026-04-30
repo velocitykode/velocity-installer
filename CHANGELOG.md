@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.1] - 2026-04-30
+
+### Fixed
+- match goreleaser archives, verify checksum, respect brew
+
 ## [0.19.0] - 2026-04-30
 
 ### Added
