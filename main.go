@@ -13,7 +13,7 @@ import (
 	"github.com/velocitykode/velocity-installer/internal/version"
 )
 
-var Version = "0.19.5"
+var Version = "0.19.6"
 
 //go:embed cli-theme.toml
 var themeConfig []byte
