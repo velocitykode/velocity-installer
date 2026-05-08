@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.16] - 2026-05-08
+
+### Changed
+- refactor: pin templates by tag, drop framework version coupling
+
 ## [0.19.15] - 2026-05-08
 
 ## [0.19.14] - 2026-05-07
