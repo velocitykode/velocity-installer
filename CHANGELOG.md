@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.17] - 2026-05-08
+
+### Changed
+- chore: bump pinned templates to v0.41.0-compatible tags
+
 ## [0.19.16] - 2026-05-08
 
 ### Changed
