@@ -26,49 +26,134 @@ func generateProjectFiles(config ProjectConfig) error {
 }
 
 func generateEnvFile(config ProjectConfig) error {
-	envTemplate := `# Application
+	// Mirrors the canonical .env.example shipped in
+	// velocity-template-react / velocity-template-api so the init flow
+	// (adding Velocity to an existing Go project) emits the same env
+	// contract as the new-project flow. Env names track the framework
+	// directly: AUTH_JWT_*, VIEW_SSR_*, MAIL_MAILGUN_*, MAIL_POSTMARK_*.
+	// APP_KEY / QUEUE_SIGNING_KEY / AUTH_JWT_SECRET are generated below
+	// before .env is written, so the bootstrapped app passes the
+	// framework's mandatory-key check.
+	envTemplate := `# App
 APP_NAME={{ .Name }}
 APP_ENV=development
+APP_URL=http://localhost:4000
 APP_PORT=4000
-APP_URL=http://localhost:4000{{ if .Database }}
 
+# Logging
+LOG_DRIVER=console
+LOG_LEVEL=info
+
+# Encryption & signing - the installer populates these with random
+# 32-byte base64 values at install time. APP_KEY is also the crypto
+# fallback; set CRYPTO_KEY explicitly only if you want a dedicated
+# crypto key separate from APP_KEY.
+APP_KEY={{ .AppKey }}
+QUEUE_SIGNING_KEY={{ .QueueSigningKey }}
+AUTH_JWT_SECRET={{ .AuthJWTSecret }}
+CRYPTO_CIPHER=AES-256-GCM
+
+# Enable to revoke blacklisted JWT IDs.
+AUTH_JWT_BLACKLIST_ENABLED=false
+# AUTH_JWT_ALGO=HS256
+# AUTH_JWT_TTL=60
+# AUTH_JWT_REFRESH_TTL=20160
+{{ if .Database }}
 # Database
-DB_CONNECTION={{ .Database }}
-DB_HOST=localhost{{ if eq .Database "postgres" }}
+DB_CONNECTION={{ .Database }}{{ if eq .Database "postgres" }}
+DB_HOST=127.0.0.1
 DB_PORT=5432
 DB_DATABASE={{ .Name }}_db
 DB_USERNAME=postgres
-DB_PASSWORD=password{{ else if eq .Database "mysql" }}
+DB_PASSWORD=
+# DB_SSL_MODE=disable{{ else if eq .Database "mysql" }}
+DB_HOST=127.0.0.1
 DB_PORT=3306
 DB_DATABASE={{ .Name }}_db
 DB_USERNAME=root
-DB_PASSWORD=password{{ else if eq .Database "sqlite" }}
-DB_PATH=./database/database.db{{ end }}{{ end }}{{ if .Cache }}
-
+DB_PASSWORD={{ else if eq .Database "sqlite" }}
+DB_DATABASE=database.sqlite{{ end }}
+{{ end }}{{ if .Cache }}
 # Cache
 CACHE_DRIVER={{ .Cache }}{{ if eq .Cache "redis" }}
-REDIS_HOST=localhost
+REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
 REDIS_PASSWORD=
-REDIS_DB=0{{ end }}{{ end }}{{ if .Auth }}
+REDIS_DATABASE=0{{ end }}
+{{ end }}
+# Session
+SESSION_NAME=velocity_session
+SESSION_LIFETIME=120
+SESSION_PATH=/
+SESSION_SECURE=false
+SESSION_HTTP_ONLY=true
+SESSION_SAME_SITE=lax
 
-# Authentication
-AUTH_SECRET=your-secret-key-here
-AUTH_EXPIRY=24h{{ end }}
+# Filesystem
+FILESYSTEM_DISK=local
 
-# Logging
-LOG_LEVEL=debug
-LOG_OUTPUT=stdout
-`
+# Mail
+# MAIL_DRIVER=smtp
+# MAIL_HOST=smtp.mailtrap.io
+# MAIL_PORT=587
+# MAIL_USERNAME=
+# MAIL_PASSWORD=
+# MAIL_FROM_ADDRESS=hello@example.com
+# MAIL_FROM_NAME="${APP_NAME}"
 
-	filePath := filepath.Join(config.Name, ".env.example")
-	if err := executeTemplate(filePath, envTemplate, config); err != nil {
+# Mailgun
+# MAIL_MAILGUN_DOMAIN=
+# MAIL_MAILGUN_SECRET=
+# MAIL_MAILGUN_ENDPOINT=api.mailgun.net
+
+# Postmark
+# MAIL_POSTMARK_TOKEN=
+# MAIL_POSTMARK_MESSAGE_STREAM=outbound
+
+# AWS / S3
+# AWS_ACCESS_KEY_ID=
+# AWS_SECRET_ACCESS_KEY=
+# AWS_DEFAULT_REGION=us-east-1
+# AWS_BUCKET=
+{{ if not .API }}
+# View SSR (Inertia)
+# VIEW_SSR_ENABLED=false
+# VIEW_SSR_URL=http://127.0.0.1:13714/render
+# VIEW_SSR_TIMEOUT=3s
+# VIEW_SSR_EXCEPT=/admin,/internal
+{{ end }}`
+
+	// Generate .env.example with placeholder keys (so it can be
+	// committed to source control safely) and .env with real keys
+	// populated for immediate boot.
+	exampleData := envFileData{ProjectConfig: config}
+	exampleData.AppKey = ""
+	exampleData.QueueSigningKey = ""
+	exampleData.AuthJWTSecret = ""
+	if err := executeTemplate(filepath.Join(config.Name, ".env.example"), envTemplate, exampleData); err != nil {
 		return err
 	}
 
-	// Also create .env file
-	filePath = filepath.Join(config.Name, ".env")
-	return executeTemplate(filePath, envTemplate, config)
+	envData := envFileData{ProjectConfig: config}
+	for _, p := range []*string{&envData.AppKey, &envData.QueueSigningKey, &envData.AuthJWTSecret} {
+		k, err := generateKey()
+		if err != nil {
+			return err
+		}
+		*p = k
+	}
+	return executeTemplate(filepath.Join(config.Name, ".env"), envTemplate, envData)
+}
+
+// envFileData wraps ProjectConfig with installer-generated secret
+// material so the env template can render a self-contained .env in one
+// pass. ProjectConfig is embedded so existing template references like
+// {{ .Name }} / {{ .Database }} keep working.
+type envFileData struct {
+	ProjectConfig
+	AppKey          string
+	QueueSigningKey string
+	AuthJWTSecret   string
 }
 
 func generateGitignore(config ProjectConfig) error {

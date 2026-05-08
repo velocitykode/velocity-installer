@@ -6,7 +6,6 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,80 +22,46 @@ import (
 	"github.com/velocitykode/velocity-installer/internal/ui"
 )
 
-// Fallback version if GitHub API is unavailable
-const fallbackVelocityVersion = "v0.20.3"
-
-// semverTagRE matches plain semver-style tags (vX.Y.Z) - pre-releases
-// like vX.Y.Z-rc1 are excluded so the installer never picks an
-// unfinished tag.
-var semverTagRE = regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)$`)
-
-// getLatestVelocityVersion fetches the highest semver tag from the
-// velocity repo. Tags are the source of truth - GitHub Releases are
-// ceremonial and may lag (or never be created). Filtering to vX.Y.Z
-// also guards against draft/pre-release tags.
-func getLatestVelocityVersion() string {
-	client := &http.Client{Timeout: 5 * time.Second}
-	// 100 tags is the per-page max; the auto-release cadence makes
-	// the latest plain semver tag fall comfortably inside the first
-	// page, even when patch releases stack up.
-	resp, err := client.Get("https://api.github.com/repos/velocitykode/velocity/tags?per_page=100")
-	if err != nil {
-		return fallbackVelocityVersion
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fallbackVelocityVersion
-	}
-
-	var tags []struct {
-		Name string `json:"name"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
-		return fallbackVelocityVersion
-	}
-
-	names := make([]string, 0, len(tags))
-	for _, t := range tags {
-		names = append(names, t.Name)
-	}
-	if best := pickHighestSemverTag(names); best != "" {
-		return best
-	}
-	return fallbackVelocityVersion
+// supportedTemplates pins each template repo to a published tag. The
+// template's go.mod is the source of truth for which framework version
+// the scaffold runs against, so the installer no longer queries GitHub
+// for the latest framework tag - it just fetches the pinned template,
+// and `go mod tidy` resolves whatever framework version that template's
+// go.mod requires. Empty string means "fall back to main" (used while a
+// template repo is being prepared for its first tag).
+//
+// Bumped manually after verifying the template tag actually builds
+// against its pinned framework version. Auto-bumping was tried and
+// removed - blind tag promotion shipped broken templates downstream.
+var supportedTemplates = map[string]string{
+	"react": "v0.7.2",
+	"vue":   "", // not yet tagged; fall back to main
+	"api":   "v0.3.0",
 }
 
-// pickHighestSemverTag returns the highest vX.Y.Z tag from names, or
-// "" if none qualifies. Pre-release suffixes (-rc1, -beta) are
-// excluded so an unfinished tag never wins.
-func pickHighestSemverTag(names []string) string {
-	var bestName string
-	var bestMajor, bestMinor, bestPatch int
-	for _, name := range names {
-		m := semverTagRE.FindStringSubmatch(name)
-		if m == nil {
-			continue
-		}
-		major, minor, patch := atoi(m[1]), atoi(m[2]), atoi(m[3])
-		if bestName == "" ||
-			major > bestMajor ||
-			(major == bestMajor && minor > bestMinor) ||
-			(major == bestMajor && minor == bestMinor && patch > bestPatch) {
-			bestName, bestMajor, bestMinor, bestPatch = name, major, minor, patch
-		}
+// SupportedTemplates returns a copy of the pinned template tags so
+// callers (e.g. main's --version printer) can read them without
+// touching package state. The map is intentionally returned by value so
+// the caller cannot mutate the source of truth.
+func SupportedTemplates() map[string]string {
+	out := make(map[string]string, len(supportedTemplates))
+	for k, v := range supportedTemplates {
+		out[k] = v
 	}
-	return bestName
+	return out
 }
 
-// atoi parses a regex-captured digit group. The regex guarantees a
-// digits-only match so strconv-style error handling is unnecessary.
-func atoi(s string) int {
-	n := 0
-	for _, c := range s {
-		n = n*10 + int(c-'0')
+// templateRef returns the git ref (tag or branch) used to fetch the
+// given template repo. Tagged templates pin a stable tarball; untagged
+// ones fall back to main so a freshly tagged repo doesn't break the
+// installer between the template's first release and the matching
+// installer release.
+func templateRef(repo string) string {
+	key := strings.TrimPrefix(repo, "velocity-template-")
+	if tag, ok := supportedTemplates[key]; ok && tag != "" {
+		return "tags/" + tag
 	}
-	return n
+	return "heads/main"
 }
 
 // ProjectConfig holds the configuration for a new project
@@ -112,10 +77,10 @@ type ProjectConfig struct {
 	// Maps to velocity-template-${Stack} on GitHub.
 	Stack string
 	// SSR toggles Inertia server-side rendering in the generated app.
-	// When true the installer enables INERTIA_SSR_ENABLED=true and
-	// points INERTIA_SSR_URL at Vite's /__inertia_ssr dev endpoint.
-	// When false the installer adds ssr:false to vite.config.ts so the
-	// @inertiajs/vite plugin stays quiet in dev.
+	// When true the installer enables VIEW_SSR_ENABLED=true and points
+	// VIEW_SSR_URL at Vite's /__inertia_ssr dev endpoint. When false the
+	// installer adds ssr:false to vite.config.ts so the @inertiajs/vite
+	// plugin stays quiet in dev.
 	SSR bool
 }
 
@@ -246,35 +211,42 @@ var ErrMigrationsSkipped = errors.New("migrations skipped: database not ready")
 // as a tarball from GitHub. Faster than git clone (no .git/ payload, no
 // pack-file assembly) and the template's git history is discarded by
 // reinitGitRepo anyway, so nothing is lost. Falls back to git clone when
-// the HTTP fetch fails (corporate proxy, offline mirror, etc.).
+// the HTTP fetch fails (corporate proxy, offline mirror, etc.). The ref
+// (tag or branch) is resolved from supportedTemplates so each installer
+// release pins exact template versions.
 func cloneTemplate(projectName string, apiOnly bool, stack string) error {
 	templateRepo := "velocity-template-" + stack
 	if apiOnly {
 		templateRepo = "velocity-template-api"
 	}
+	ref := templateRef(templateRepo)
 
-	if err := downloadTemplateTarball(templateRepo, projectName); err == nil {
+	if err := downloadTemplateTarball(templateRepo, ref, projectName); err == nil {
 		return nil
 	}
 
 	// Fallback: git clone (keeps the tool working in environments that
-	// block codeload.github.com but allow ssh/https git).
-	cmd := exec.Command("git", "clone", "--depth=1", "git@github.com:velocitykode/"+templateRepo+".git", projectName)
+	// block codeload.github.com but allow ssh/https git). When ref is a
+	// tag we still --depth=1 against that tag; when it's a branch the
+	// same flag works against the branch tip.
+	gitRef := strings.TrimPrefix(strings.TrimPrefix(ref, "tags/"), "heads/")
+	cmd := exec.Command("git", "clone", "--depth=1", "--branch="+gitRef, "git@github.com:velocitykode/"+templateRepo+".git", projectName)
 	if err := cmd.Run(); err == nil {
 		return nil
 	}
-	cmd = exec.Command("git", "clone", "--depth=1", "https://github.com/velocitykode/"+templateRepo+".git", projectName)
+	cmd = exec.Command("git", "clone", "--depth=1", "--branch="+gitRef, "https://github.com/velocitykode/"+templateRepo+".git", projectName)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to fetch template (tarball and git clone both failed): %w", err)
+		return fmt.Errorf("failed to fetch template %s@%s (tarball and git clone both failed): %w", templateRepo, gitRef, err)
 	}
 	return nil
 }
 
 // downloadTemplateTarball streams codeload.github.com's .tar.gz of the
-// template's main branch into projectName, stripping the single top-level
-// directory that GitHub wraps every tarball in.
-func downloadTemplateTarball(repo, projectName string) error {
-	url := fmt.Sprintf("https://codeload.github.com/velocitykode/%s/tar.gz/refs/heads/main", repo)
+// template at the given ref into projectName, stripping the single
+// top-level directory that GitHub wraps every tarball in. ref is in
+// codeload form: "tags/v0.7.2" or "heads/main".
+func downloadTemplateTarball(repo, ref, projectName string) error {
+	url := fmt.Sprintf("https://codeload.github.com/velocitykode/%s/tar.gz/refs/%s", repo, ref)
 	client := &http.Client{Timeout: 60 * time.Second}
 	resp, err := client.Get(url)
 	if err != nil {
@@ -383,22 +355,19 @@ func replaceModuleName(projectPath, moduleName string) error {
 		fmt.Sprintf("cd '%s' && [ -f package-lock.json ] && sed 's|{{MODULE_NAME}}|%s|g' package-lock.json > package-lock.json.tmp && mv package-lock.json.tmp package-lock.json || true", absPath, moduleName))
 	cmd.Run() // Ignore error - file may not exist
 
-	// Only process go.mod if it exists
+	// Only process go.mod if it exists. Strip any `replace` directive
+	// pointing at a local framework checkout - templates sometimes
+	// include one for development. The framework version itself is
+	// whatever the template's go.mod requires; the installer no longer
+	// rewrites it. To upgrade an existing project past a framework
+	// breaker, run `go get github.com/velocitykode/velocity@vX.Y.Z`
+	// and address the migration steps manually (see CHANGELOG).
 	goModPath := filepath.Join(absPath, "go.mod")
 	if _, err := os.Stat(goModPath); err == nil {
-		// Remove replace directive
 		cmd = exec.Command("sh", "-c",
 			fmt.Sprintf("cd '%s' && sed '/^replace github.com\\/velocitykode\\/velocity/d' go.mod > go.mod.tmp && mv go.mod.tmp go.mod", absPath))
 		if err := cmd.Run(); err != nil {
 			return err
-		}
-
-		// Set pinned version of velocity framework (fetched from GitHub releases)
-		velocityVersion := getLatestVelocityVersion()
-		cmd = exec.Command("go", "mod", "edit", fmt.Sprintf("-require=github.com/velocitykode/velocity@%s", velocityVersion))
-		cmd.Dir = absPath
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to set velocity framework version: %w", err)
 		}
 	}
 
@@ -789,12 +758,12 @@ func initGoModule(config ProjectConfig) error {
 		cmd.Run()
 		cli.Info("Using local Velocity framework")
 	} else {
-		// Try to get from GitHub (requires GOPRIVATE setup for private repos).
-		// Use getLatestVelocityVersion so re-init/repair flows track the
-		// same tag the new-project flow does, instead of pinning a stale
-		// hardcoded version.
-		velocityVersion := getLatestVelocityVersion()
-		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@"+velocityVersion)
+		// Try to get latest from GitHub (requires GOPRIVATE for private
+		// repos). The init/repair path - unlike the new-project path,
+		// which inherits the framework version from the template's
+		// go.mod - has no template to pin against, so it just resolves
+		// @latest and lets the developer adjust afterward.
+		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@latest")
 		if err := cmd.Run(); err != nil {
 			cli.Warning("Note: Configure GOPRIVATE for private repo access")
 		}
@@ -981,7 +950,7 @@ func upsertEnvLine(envPath, key, value string) error {
 
 // applySSROption wires the --ssr flag into the generated project.
 //
-// With --ssr: enable INERTIA_SSR_ENABLED in .env and point the URL at
+// With --ssr: enable VIEW_SSR_ENABLED in .env and point the URL at
 // Vite's dev endpoint, so the scaffold serves SSR out of the box.
 //
 // Without --ssr: patch vite.config.ts so the @inertiajs/vite plugin
@@ -996,7 +965,7 @@ func applySSROption(config ProjectConfig, absPath string) error {
 
 	if config.SSR {
 		cmd := exec.Command("sh", "-c", fmt.Sprintf(
-			"cd '%s' && sed -E 's|^# *INERTIA_SSR_ENABLED=.*|INERTIA_SSR_ENABLED=true|; s|^# *INERTIA_SSR_URL=.*|INERTIA_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *INERTIA_SSR_TIMEOUT=.*|INERTIA_SSR_TIMEOUT=3s|' .env > .env.tmp && mv .env.tmp .env",
+			"cd '%s' && sed -E 's|^# *VIEW_SSR_ENABLED=.*|VIEW_SSR_ENABLED=true|; s|^# *VIEW_SSR_URL=.*|VIEW_SSR_URL=http://localhost:5173/__inertia_ssr|; s|^# *VIEW_SSR_TIMEOUT=.*|VIEW_SSR_TIMEOUT=3s|' .env > .env.tmp && mv .env.tmp .env",
 			absPath,
 		))
 		if err := cmd.Run(); err != nil {

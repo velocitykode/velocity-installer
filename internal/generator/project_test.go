@@ -7,27 +7,20 @@ import (
 	"testing"
 )
 
-func TestPickHighestSemverTag(t *testing.T) {
+func TestTemplateRef(t *testing.T) {
 	cases := []struct {
-		name string
-		tags []string
+		repo string
 		want string
 	}{
-		{name: "empty list", tags: nil, want: ""},
-		{name: "single valid tag", tags: []string{"v0.34.1"}, want: "v0.34.1"},
-		{name: "picks highest patch", tags: []string{"v0.34.0", "v0.34.1", "v0.33.0"}, want: "v0.34.1"},
-		{name: "minor beats patch of older minor", tags: []string{"v0.33.99", "v0.34.0"}, want: "v0.34.0"},
-		{name: "major beats minor", tags: []string{"v0.99.99", "v1.0.0"}, want: "v1.0.0"},
-		{name: "ignores pre-release suffixes", tags: []string{"v0.34.1-rc1", "v0.34.0"}, want: "v0.34.0"},
-		{name: "ignores non-semver tags", tags: []string{"latest", "stable", "v0.34.1"}, want: "v0.34.1"},
-		{name: "two-segment tags excluded", tags: []string{"v0.34", "v0.33.0"}, want: "v0.33.0"},
-		{name: "all invalid returns empty", tags: []string{"foo", "bar", "v0.34"}, want: ""},
-		{name: "double-digit components", tags: []string{"v0.9.10", "v0.10.0", "v0.10.1"}, want: "v0.10.1"},
+		{repo: "velocity-template-react", want: "tags/" + supportedTemplates["react"]},
+		{repo: "velocity-template-api", want: "tags/" + supportedTemplates["api"]},
+		{repo: "velocity-template-vue", want: "heads/main"},     // empty pin -> main
+		{repo: "velocity-template-unknown", want: "heads/main"}, // not in map
 	}
 	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := pickHighestSemverTag(tc.tags); got != tc.want {
-				t.Errorf("pickHighestSemverTag(%v) = %q, want %q", tc.tags, got, tc.want)
+		t.Run(tc.repo, func(t *testing.T) {
+			if got := templateRef(tc.repo); got != tc.want {
+				t.Errorf("templateRef(%q) = %q, want %q", tc.repo, got, tc.want)
 			}
 		})
 	}
