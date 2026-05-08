@@ -14,8 +14,8 @@ func TestTemplateRef(t *testing.T) {
 	}{
 		{repo: "velocity-template-react", want: "tags/" + supportedTemplates["react"]},
 		{repo: "velocity-template-api", want: "tags/" + supportedTemplates["api"]},
-		{repo: "velocity-template-vue", want: "heads/main"},     // empty pin -> main
-		{repo: "velocity-template-unknown", want: "heads/main"}, // not in map
+		{repo: "velocity-template-vue", want: "tags/" + supportedTemplates["vue"]},
+		{repo: "velocity-template-unknown", want: "heads/main"}, // not in map -> main
 	}
 	for _, tc := range cases {
 		t.Run(tc.repo, func(t *testing.T) {
