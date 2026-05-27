@@ -35,7 +35,7 @@ import (
 // removed - blind tag promotion shipped broken templates downstream.
 var supportedTemplates = map[string]string{
 	"react": "v0.8.6",
-	"vue":   "v0.0.7",
+	"vue":   "v0.0.8",
 	"api":   "v0.3.6",
 }
 
