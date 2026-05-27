@@ -867,6 +867,15 @@ func createEnvFiles(config ProjectConfig) error {
 		if err != nil {
 			return fmt.Errorf("generate %s: %w", envKey, err)
 		}
+		// APP_KEY flows through velocity/crypto.parseKey which only
+		// base64-decodes values prefixed with "base64:". Without the
+		// prefix the 44-char standard-base64 string is consumed as 44
+		// raw bytes and NewAESDriver rejects with ErrInvalidKeyLength
+		// on first boot. QUEUE_SIGNING_KEY and AUTH_JWT_SECRET are
+		// consumed as raw bytes for HMAC and stay unprefixed.
+		if envKey == "APP_KEY" {
+			value = "base64:" + value
+		}
 		if err := upsertEnvLine(envPath, envKey, value); err != nil {
 			return fmt.Errorf("write %s: %w", envKey, err)
 		}

@@ -48,6 +48,13 @@ LOG_LEVEL=info
 # 32-byte base64 values at install time. APP_KEY is also the crypto
 # fallback; set CRYPTO_KEY explicitly only if you want a dedicated
 # crypto key separate from APP_KEY.
+#
+# APP_KEY MUST carry the "base64:" prefix so velocity/crypto base64-
+# decodes it back to the 32 raw bytes the AES driver requires. Use
+# ` + "`vel key:generate`" + ` to (re)mint it; pasting a raw base64 value
+# without the prefix will fail boot with ErrInvalidKeyLength.
+# QUEUE_SIGNING_KEY and AUTH_JWT_SECRET are consumed as raw HMAC
+# bytes and stay unprefixed.
 APP_KEY={{ .AppKey }}
 QUEUE_SIGNING_KEY={{ .QueueSigningKey }}
 AUTH_JWT_SECRET={{ .AuthJWTSecret }}
@@ -142,6 +149,13 @@ FILESYSTEM_DISK=local
 		}
 		*p = k
 	}
+	// APP_KEY flows through velocity/crypto.parseKey which only
+	// base64-decodes values prefixed with "base64:". Without the
+	// prefix the 44-char standard-base64 string is consumed as 44
+	// raw bytes and NewAESDriver rejects with ErrInvalidKeyLength
+	// on first boot. QUEUE_SIGNING_KEY and AUTH_JWT_SECRET are
+	// consumed as raw bytes for HMAC and stay unprefixed.
+	envData.AppKey = "base64:" + envData.AppKey
 	return executeTemplate(filepath.Join(config.Name, ".env"), envTemplate, envData)
 }
 

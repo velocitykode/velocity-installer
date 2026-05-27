@@ -580,8 +580,10 @@ CACHE_DRIVER=memory
 
 				// APP_KEY, QUEUE_SIGNING_KEY, AUTH_JWT_SECRET must all
 				// be written so the framework has everything it needs
-				// at bootstrap. Each should be a 44-char base64 value
-				// (32 random bytes, standard encoding with padding).
+				// at bootstrap. APP_KEY carries a "base64:" prefix so
+				// velocity/crypto.parseKey base64-decodes it back to
+				// the 32 raw bytes NewAESDriver requires. The two
+				// HMAC secrets stay unprefixed (consumed as raw bytes).
 				for _, envKey := range []string{"APP_KEY", "QUEUE_SIGNING_KEY", "AUTH_JWT_SECRET"} {
 					var match string
 					for _, line := range strings.Split(envStr, "\n") {
@@ -595,6 +597,13 @@ CACHE_DRIVER=memory
 						continue
 					}
 					value := strings.TrimPrefix(match, envKey+"=")
+					if envKey == "APP_KEY" {
+						if !strings.HasPrefix(value, "base64:") {
+							t.Errorf("%s missing base64: prefix; got %q", envKey, value)
+							continue
+						}
+						value = strings.TrimPrefix(value, "base64:")
+					}
 					if len(value) != 44 {
 						t.Errorf("%s length = %d, want 44 (base64 of 32 bytes)", envKey, len(value))
 					}
