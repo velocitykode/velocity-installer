@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.44] - 2026-05-27
+
+### Changed
+- refactor(generator): bump react+vue pins to vform.Form adoption
+
 ## [0.19.43] - 2026-05-27
 
 ### Changed
