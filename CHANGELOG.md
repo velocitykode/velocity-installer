@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.42] - 2026-05-27
+
+### Fixed
+- bump vue template pin to v0.0.8
+
 ## [0.19.41] - 2026-05-27
 
 ### Fixed
