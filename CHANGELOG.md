@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.41] - 2026-05-27
+
+### Fixed
+- correct react+vue template pins to migration tags
+
 ## [0.19.40] - 2026-05-27
 
 ### Fixed
