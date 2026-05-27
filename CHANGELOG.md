@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.40] - 2026-05-27
+
+### Fixed
+- bump template pins to framework-middleware cleanup tags
+
 ## [0.19.39] - 2026-05-27
 
 ### Fixed
