@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.43] - 2026-05-27
+
+### Changed
+- refactor(generator): bump react+vue pins for view.Redirect shorthand
+
 ## [0.19.42] - 2026-05-27
 
 ### Fixed
