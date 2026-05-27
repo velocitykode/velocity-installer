@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.39] - 2026-05-27
+
+### Fixed
+- bump template pins to drop gonertia + populate meta tag
+
 ## [0.19.38] - 2026-05-27
 
 ### Fixed
