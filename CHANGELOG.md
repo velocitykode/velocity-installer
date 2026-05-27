@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.36] - 2026-05-27
+
+### Fixed
+- prefix on APP_KEY in scaffolded .env
+
 ## [0.19.35] - 2026-05-27
 
 ## [0.19.34] - 2026-05-27
