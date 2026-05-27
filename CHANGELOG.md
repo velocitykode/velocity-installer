@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.38] - 2026-05-27
+
+### Fixed
+- bump supported template tags to latest
+
 ## [0.19.37] - 2026-05-27
 
 ## [0.19.36] - 2026-05-27
