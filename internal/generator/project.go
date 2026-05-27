@@ -34,8 +34,8 @@ import (
 // against its pinned framework version. Auto-bumping was tried and
 // removed - blind tag promotion shipped broken templates downstream.
 var supportedTemplates = map[string]string{
-	"react": "v0.8.6",
-	"vue":   "v0.0.8",
+	"react": "v0.8.7",
+	"vue":   "v0.0.9",
 	"api":   "v0.3.6",
 }
 
