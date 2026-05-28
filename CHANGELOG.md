@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.19.48] - 2026-05-28
+
+### Fixed
+- bump react template pin to v0.8.9
+
 ## [0.19.47] - 2026-05-28
 
 ## [0.19.46] - 2026-05-28
