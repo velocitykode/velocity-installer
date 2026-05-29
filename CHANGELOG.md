@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.0] - 2026-05-29
+
+### Added
+- resolve latest template tag instead of a manual pin
+
 ## [0.19.50] - 2026-05-29
 
 ## [0.19.49] - 2026-05-29
