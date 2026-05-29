@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.20.1] - 2026-05-29
+
+### Changed
+- test(installer): use sentinel tag in templateRef test
+
 ## [0.20.0] - 2026-05-29
 
 ### Added
