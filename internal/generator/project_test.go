@@ -11,8 +11,11 @@ import (
 // the ref formatting without hitting the GitHub API. A resolved tag yields
 // tags/<tag>; an unresolved repo (empty cache entry) falls back to main.
 func TestTemplateRef(t *testing.T) {
+	// Seed the resolver cache with a sentinel so the assertion is about ref
+	// formatting, not a real version. The value is arbitrary; nothing is
+	// pinned in production (tags resolve live from GitHub).
 	tagCacheMu.Lock()
-	tagCache["velocity-template-react"] = "v0.8.11"
+	tagCache["velocity-template-react"] = "v9.9.9"
 	tagCache["velocity-template-unknown"] = "" // resolution failed -> main
 	tagCacheMu.Unlock()
 	t.Cleanup(func() {
@@ -22,7 +25,7 @@ func TestTemplateRef(t *testing.T) {
 		tagCacheMu.Unlock()
 	})
 
-	if got, want := templateRef("velocity-template-react"), "tags/v0.8.11"; got != want {
+	if got, want := templateRef("velocity-template-react"), "tags/v9.9.9"; got != want {
 		t.Errorf("templateRef(react) = %q, want %q", got, want)
 	}
 	if got, want := templateRef("velocity-template-unknown"), "heads/main"; got != want {
