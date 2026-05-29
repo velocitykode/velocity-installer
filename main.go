@@ -67,13 +67,14 @@ func buildVersionTemplate(installerVersion string) string {
 	var b bytes.Buffer
 	fmt.Fprintf(&b, "velocity %s\n", installerVersion)
 	fmt.Fprintln(&b, "templates:")
-	keys := make([]string, 0, len(generator.SupportedTemplates()))
-	for k := range generator.SupportedTemplates() {
+	tmpls := generator.SupportedTemplates()
+	keys := make([]string, 0, len(tmpls))
+	for k := range tmpls {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
 	for _, k := range keys {
-		tag := generator.SupportedTemplates()[k]
+		tag := tmpls[k]
 		if tag == "" {
 			tag = "main"
 		}

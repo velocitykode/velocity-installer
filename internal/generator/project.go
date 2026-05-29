@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,43 +24,130 @@ import (
 	"github.com/velocitykode/velocity-installer/internal/ui"
 )
 
-// supportedTemplates pins each template repo to a published tag. The
-// template's go.mod is the source of truth for which framework version
-// the scaffold runs against, so the installer no longer queries GitHub
-// for the latest framework tag - it just fetches the pinned template,
-// and `go mod tidy` resolves whatever framework version that template's
-// go.mod requires. Empty string means "fall back to main" (used while a
-// template repo is being prepared for its first tag).
+// knownStacks lists the template repos the installer can scaffold, keyed
+// by the short stack name (the suffix after velocity-template-). Used by
+// the --version printer; the actual version is resolved live per repo.
+var knownStacks = []string{"react", "vue", "api"}
+
+// semverTag matches a vMAJOR.MINOR.PATCH release tag (no pre-release
+// suffix). Templates are fetched at their newest such tag.
+var semverTag = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+
+// tagCache memoises the resolved latest tag per repo for the lifetime of
+// the process so templateRef and SupportedTemplates do not double-call the
+// GitHub API. Guarded because a single scaffold may resolve concurrently.
+var (
+	tagCacheMu sync.Mutex
+	tagCache   = map[string]string{}
+)
+
+// latestTemplateTag returns the newest vX.Y.Z tag published for the given
+// template repo, resolved live from the GitHub API. The installer no
+// longer pins template versions: a template's own CI gates its build and
+// tests before it tags, so the newest tag is always a vetted release, and
+// floating to it removes the manual-bump lag that left fixes stranded
+// between a template release and an installer release.
 //
-// Bumped manually after verifying the template tag actually builds
-// against its pinned framework version. Auto-bumping was tried and
-// removed - blind tag promotion shipped broken templates downstream.
-var supportedTemplates = map[string]string{
-	"react": "v0.8.9",
-	"vue":   "v0.0.10",
-	"api":   "v0.3.6",
+// Returns "" (caller falls back to main) when the API is unreachable, rate
+// limited, or the repo has no semver tag yet. Honours GITHUB_TOKEN to lift
+// the unauthenticated rate limit in CI.
+func latestTemplateTag(repo string) string {
+	tagCacheMu.Lock()
+	defer tagCacheMu.Unlock()
+	if v, ok := tagCache[repo]; ok {
+		return v
+	}
+
+	tag := fetchLatestTag(repo)
+	tagCache[repo] = tag
+	return tag
 }
 
-// SupportedTemplates returns a copy of the pinned template tags so
-// callers (e.g. main's --version printer) can read them without
-// touching package state. The map is intentionally returned by value so
-// the caller cannot mutate the source of truth.
-func SupportedTemplates() map[string]string {
-	out := make(map[string]string, len(supportedTemplates))
-	for k, v := range supportedTemplates {
-		out[k] = v
+func fetchLatestTag(repo string) string {
+	url := fmt.Sprintf("https://api.github.com/repos/velocitykode/%s/tags?per_page=100", repo)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return ""
+	}
+	req.Header.Set("Accept", "application/vnd.github+json")
+	if token := os.Getenv("GITHUB_TOKEN"); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return ""
+	}
+
+	var tags []struct {
+		Name string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tags); err != nil {
+		return ""
+	}
+
+	latest := ""
+	for _, t := range tags {
+		if !semverTag.MatchString(t.Name) {
+			continue
+		}
+		if latest == "" || semverLess(latest, t.Name) {
+			latest = t.Name
+		}
+	}
+	return latest
+}
+
+// semverLess reports whether tag a sorts before tag b numerically, so a
+// lexical compare ("v0.8.9" > "v0.8.11") does not pick the wrong newest.
+func semverLess(a, b string) bool {
+	pa, pb := parseSemver(a), parseSemver(b)
+	for i := 0; i < 3; i++ {
+		if pa[i] != pb[i] {
+			return pa[i] < pb[i]
+		}
+	}
+	return false
+}
+
+func parseSemver(v string) [3]int {
+	var out [3]int
+	for i, p := range strings.SplitN(strings.TrimPrefix(v, "v"), ".", 3) {
+		if i > 2 {
+			break
+		}
+		n, _ := strconv.Atoi(p)
+		out[i] = n
 	}
 	return out
 }
 
-// templateRef returns the git ref (tag or branch) used to fetch the
-// given template repo. Tagged templates pin a stable tarball; untagged
-// ones fall back to main so a freshly tagged repo doesn't break the
-// installer between the template's first release and the matching
-// installer release.
+// SupportedTemplates returns the resolved latest tag for each known stack
+// so callers (e.g. main's --version printer) can display what a scaffold
+// would fetch. A stack whose latest tag cannot be resolved maps to "main"
+// (the fetch fallback).
+func SupportedTemplates() map[string]string {
+	out := make(map[string]string, len(knownStacks))
+	for _, key := range knownStacks {
+		if tag := latestTemplateTag("velocity-template-" + key); tag != "" {
+			out[key] = tag
+		} else {
+			out[key] = "main"
+		}
+	}
+	return out
+}
+
+// templateRef returns the git ref used to fetch the given template repo:
+// the newest published vX.Y.Z tag, or main when no tag resolves (fresh
+// repo, or GitHub unreachable).
 func templateRef(repo string) string {
-	key := strings.TrimPrefix(repo, "velocity-template-")
-	if tag, ok := supportedTemplates[key]; ok && tag != "" {
+	if tag := latestTemplateTag(repo); tag != "" {
 		return "tags/" + tag
 	}
 	return "heads/main"

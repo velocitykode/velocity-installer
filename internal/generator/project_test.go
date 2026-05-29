@@ -7,22 +7,46 @@ import (
 	"testing"
 )
 
+// TestTemplateRef drives the resolved-tag cache directly so it exercises
+// the ref formatting without hitting the GitHub API. A resolved tag yields
+// tags/<tag>; an unresolved repo (empty cache entry) falls back to main.
 func TestTemplateRef(t *testing.T) {
+	tagCacheMu.Lock()
+	tagCache["velocity-template-react"] = "v0.8.11"
+	tagCache["velocity-template-unknown"] = "" // resolution failed -> main
+	tagCacheMu.Unlock()
+	t.Cleanup(func() {
+		tagCacheMu.Lock()
+		delete(tagCache, "velocity-template-react")
+		delete(tagCache, "velocity-template-unknown")
+		tagCacheMu.Unlock()
+	})
+
+	if got, want := templateRef("velocity-template-react"), "tags/v0.8.11"; got != want {
+		t.Errorf("templateRef(react) = %q, want %q", got, want)
+	}
+	if got, want := templateRef("velocity-template-unknown"), "heads/main"; got != want {
+		t.Errorf("templateRef(unknown) = %q, want %q", got, want)
+	}
+}
+
+// TestSemverLess pins numeric ordering so a lexical compare cannot pick
+// v0.8.9 over the newer v0.8.11.
+func TestSemverLess(t *testing.T) {
 	cases := []struct {
-		repo string
-		want string
+		a, b string
+		less bool
 	}{
-		{repo: "velocity-template-react", want: "tags/" + supportedTemplates["react"]},
-		{repo: "velocity-template-api", want: "tags/" + supportedTemplates["api"]},
-		{repo: "velocity-template-vue", want: "tags/" + supportedTemplates["vue"]},
-		{repo: "velocity-template-unknown", want: "heads/main"}, // not in map -> main
+		{"v0.8.9", "v0.8.11", true},
+		{"v0.8.11", "v0.8.9", false},
+		{"v0.8.11", "v0.8.11", false},
+		{"v0.9.0", "v0.10.0", true},
+		{"v1.0.0", "v0.49.5", false},
 	}
 	for _, tc := range cases {
-		t.Run(tc.repo, func(t *testing.T) {
-			if got := templateRef(tc.repo); got != tc.want {
-				t.Errorf("templateRef(%q) = %q, want %q", tc.repo, got, tc.want)
-			}
-		})
+		if got := semverLess(tc.a, tc.b); got != tc.less {
+			t.Errorf("semverLess(%q,%q) = %v, want %v", tc.a, tc.b, got, tc.less)
+		}
 	}
 }
 
