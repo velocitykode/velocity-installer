@@ -52,14 +52,29 @@ var (
 // limited, or the repo has no semver tag yet. Honours GITHUB_TOKEN to lift
 // the unauthenticated rate limit in CI.
 func latestTemplateTag(repo string) string {
+	// 1. Process-lifetime memory cache (a single scaffold resolves a repo once).
 	tagCacheMu.Lock()
-	defer tagCacheMu.Unlock()
 	if v, ok := tagCache[repo]; ok {
+		tagCacheMu.Unlock()
+		return v
+	}
+	tagCacheMu.Unlock()
+
+	// 2. Cross-run disk cache (file driver): skips the GitHub API call on the
+	//    next `velocity new` within the TTL. Best-effort; nil store = no cache.
+	if v, ok := loadCachedTag(repo); ok {
+		tagCacheMu.Lock()
+		tagCache[repo] = v
+		tagCacheMu.Unlock()
 		return v
 	}
 
+	// 3. Network: resolve live, then populate both caches (disk only on success).
 	tag := fetchLatestTag(repo)
+	tagCacheMu.Lock()
 	tagCache[repo] = tag
+	tagCacheMu.Unlock()
+	storeCachedTag(repo, tag)
 	return tag
 }
 
