@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.0] - 2026-05-30
+
+### Added
+- disk-cache template tag lookups via file cache driver
+
 ## [0.20.2] - 2026-05-30
 
 ## [0.20.1] - 2026-05-29
