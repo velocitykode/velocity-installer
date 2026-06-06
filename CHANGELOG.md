@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.13] - 2026-06-06
+
+### Fixed
+- bump velocity-cli to v0.15.1
+
 ## [0.21.12] - 2026-06-06
 
 ## [0.21.11] - 2026-06-02
