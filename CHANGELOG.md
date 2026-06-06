@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.14] - 2026-06-06
+
+### Changed
+- ci: float Go patch to 1.26.x so stdlib-CVE fixes land without pinning a new patch each time
+
 ## [0.21.13] - 2026-06-06
 
 ### Fixed
