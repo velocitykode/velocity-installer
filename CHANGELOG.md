@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.33] - 2026-06-14
+
+### Changed
+- refactor: migrate cli dependency to prism module
+
 ## [0.21.32] - 2026-06-13
 
 ## [0.21.31] - 2026-06-13
