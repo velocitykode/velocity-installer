@@ -1,12 +1,12 @@
 package banner
 
 import (
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 )
 
 // BlockyText returns blocky ASCII art for VELOCITY CLI
 func BlockyText() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗     ██████╗██╗     ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝    ██╔════╝██║     ██║
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝     ██║     ██║     ██║
@@ -17,19 +17,19 @@ func BlockyText() string {
 
 // MediumBlocky returns medium-sized blocky text
 func MediumBlocky() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝ 
 ╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝  
  ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║   
   ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝`) + "\n" +
-		cli.StyleMuted(`       The Official Installer for Velocity Web Framework`)
+		prism.StyleMuted(`       The Official Installer for Velocity Web Framework`)
 }
 
 // CompactBlocky returns compact blocky text
 func CompactBlocky() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 █╗   █╗█████╗██╗     ██████╗ ██████╗██╗████████╗█╗   █╗    ██████╗██╗   ██╗
 █║   █║██╔══╝██║    ██╔═══██╗██╔═══╝██║╚══██╔══╝╚█╗ █╔╝    ██╔═══╝██║   ██║
 █║   █║████╗ ██║    ██║   ██║██║    ██║   ██║    ╚███╔╝    ██║    ██║   ██║

@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"github.com/spf13/cobra"
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/commands"
 	"github.com/velocitykode/velocity-installer/internal/generator"
 	"github.com/velocitykode/velocity-installer/internal/version"
@@ -21,8 +21,8 @@ var Version = "0.21.32"
 var themeConfig []byte
 
 func main() {
-	if err := cli.LoadConfig(bytes.NewReader(themeConfig)); err != nil {
-		fmt.Fprintf(os.Stderr, "velocity-cli theme: %v\n", err)
+	if err := prism.LoadConfig(bytes.NewReader(themeConfig)); err != nil {
+		fmt.Fprintf(os.Stderr, "prism theme: %v\n", err)
 	}
 
 	if err := version.CheckGoVersion(); err != nil {

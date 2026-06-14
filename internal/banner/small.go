@@ -1,12 +1,12 @@
 package banner
 
 import (
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 )
 
 // SmallSimple returns a smaller ASCII banner
 func SmallSimple() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗     ██████╗██╗     ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝    ██╔════╝██║     ██║
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝     ██║     ██║     ██║
@@ -17,7 +17,7 @@ func SmallSimple() string {
 
 // Small returns a compact ASCII banner
 func Small() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ╔═══════════════════════════════════════════════════════════════════════╗
 ║  ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗    ║
 ║  ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝    ║
@@ -29,7 +29,7 @@ func Small() string {
 
 // Minimal returns a minimal ASCII banner
 func Minimal() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ╔════════════════════════════════════╗
 ║     VELOCITY CLI                   ║
 ║     Web Framework for Go           ║
@@ -38,7 +38,7 @@ func Minimal() string {
 
 // Compact returns a very compact banner
 func Compact() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
  VELOCITY CLI 
 ══════════════════════════════════════════════════
  The Go Web Framework for Rapid Development`)

@@ -1,23 +1,23 @@
 // Package ui holds installer-specific output helpers that have no SDK equivalent.
-// All generic output (Header/Info/Success/...) comes from github.com/velocitykode/velocity-cli.
+// All generic output (Header/Info/Success/...) comes from github.com/velocitykode/prism.
 package ui
 
 import (
 	"fmt"
 
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 )
 
 // TreeItem prints a tree-style item with status.
 // prefix: "├─" for middle items, "└─" for last item.
 func TreeItem(prefix, label, status string, done bool) {
-	statusText := cli.StyleMuted(status)
+	statusText := prism.StyleMuted(status)
 	if done {
-		statusText = cli.StyleSuccess("✓ " + status)
+		statusText = prism.StyleSuccess("✓ " + status)
 	}
 	fmt.Printf("  %s %s %s\n",
-		cli.StyleMuted(prefix),
-		cli.StyleMuted(label),
+		prism.StyleMuted(prefix),
+		prism.StyleMuted(label),
 		statusText,
 	)
 }
@@ -25,9 +25,9 @@ func TreeItem(prefix, label, status string, done bool) {
 // TreeItemSkipped prints a skipped tree item.
 func TreeItemSkipped(prefix, label, reason string) {
 	fmt.Printf("  %s %s %s\n",
-		cli.StyleMuted(prefix),
-		cli.StyleMuted(label),
-		cli.StyleWarning("skipped ("+reason+")"),
+		prism.StyleMuted(prefix),
+		prism.StyleMuted(label),
+		prism.StyleWarning("skipped ("+reason+")"),
 	)
 }
 

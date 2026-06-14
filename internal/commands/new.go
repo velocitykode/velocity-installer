@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/generator"
 )
 
@@ -28,35 +28,35 @@ var NewCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			cli.Error("Project name is required")
-			cli.Newline()
-			cli.Muted("Usage: velocity new [project-name] [flags]")
-			cli.Newline()
-			cli.Muted("Flags:")
-			cli.Muted("  --database         Database driver (postgres, mysql, sqlite)")
-			cli.Muted("  --cache            Cache driver (redis, memory)")
-			cli.Muted("  --api              Create API-only project (no frontend)")
-			cli.Muted("  --stack            Frontend stack for full-stack projects (react, vue)")
-			cli.Muted("  --ssr              Enable Inertia server-side rendering")
-			cli.Muted("  -y, --non-interactive  Skip all prompts; use flags or defaults")
+			prism.Error("Project name is required")
+			prism.Newline()
+			prism.Muted("Usage: velocity new [project-name] [flags]")
+			prism.Newline()
+			prism.Muted("Flags:")
+			prism.Muted("  --database         Database driver (postgres, mysql, sqlite)")
+			prism.Muted("  --cache            Cache driver (redis, memory)")
+			prism.Muted("  --api              Create API-only project (no frontend)")
+			prism.Muted("  --stack            Frontend stack for full-stack projects (react, vue)")
+			prism.Muted("  --ssr              Enable Inertia server-side rendering")
+			prism.Muted("  -y, --non-interactive  Skip all prompts; use flags or defaults")
 			return fmt.Errorf("")
 		}
 		return nil
 	},
 	Run: func(cmd *cobra.Command, args []string) {
 		projectName := args[0]
-		cli.Header("velocity new")
+		prism.Header("velocity new")
 
 		if info, err := os.Stat(projectName); err == nil {
 			kind := "file"
 			if info.IsDir() {
 				kind = "directory"
 			}
-			cli.Error(fmt.Sprintf("A %s named '%s' already exists here", kind, projectName))
-			cli.Muted("Pick a different name, or remove the existing path and try again.")
+			prism.Error(fmt.Sprintf("A %s named '%s' already exists here", kind, projectName))
+			prism.Muted("Pick a different name, or remove the existing path and try again.")
 			return
 		} else if !os.IsNotExist(err) {
-			cli.Error(fmt.Sprintf("Cannot check '%s': %v", projectName, err))
+			prism.Error(fmt.Sprintf("Cannot check '%s': %v", projectName, err))
 			return
 		}
 
@@ -71,46 +71,46 @@ var NewCmd = &cobra.Command{
 				labelFullStack = "Full stack (Inertia + Vite)"
 				labelAPI       = "API only (no frontend)"
 			)
-			api = cli.Select(
+			api = prism.Select(
 				"Project type:",
 				[]string{labelFullStack, labelAPI},
-				cli.WithSelectDefault(labelFullStack),
+				prism.WithSelectDefault(labelFullStack),
 			) == labelAPI
 		}
 
 		if ask("database") {
-			database = cli.Select(
+			database = prism.Select(
 				"Database:",
 				[]string{"sqlite", "postgres", "mysql"},
-				cli.WithSelectDefault(database),
+				prism.WithSelectDefault(database),
 			)
 		}
 
 		if ask("cache") {
-			cache = cli.Select(
+			cache = prism.Select(
 				"Cache:",
 				[]string{"memory", "redis"},
-				cli.WithSelectDefault(cache),
+				prism.WithSelectDefault(cache),
 			)
 		}
 
 		if !api && ask("stack") {
-			stack = cli.Select(
+			stack = prism.Select(
 				"Frontend stack:",
 				generator.ValidStacks,
-				cli.WithSelectDefault(stack),
+				prism.WithSelectDefault(stack),
 			)
 		}
 
 		if !api && ask("ssr") {
-			ssr = cli.Confirm("Enable Inertia server-side rendering?", cli.WithDefaultNo())
+			ssr = prism.Confirm("Enable Inertia server-side rendering?", prism.WithDefaultNo())
 		}
 
 		// Validate flags up-front so non-interactive mode fails fast.
 		if !api {
 			stack = strings.ToLower(strings.TrimSpace(stack))
 			if !slices.Contains(generator.ValidStacks, stack) {
-				cli.Error(fmt.Sprintf(
+				prism.Error(fmt.Sprintf(
 					"Invalid --stack %q. Valid: %s",
 					stack, strings.Join(generator.ValidStacks, ", "),
 				))
@@ -130,9 +130,9 @@ var NewCmd = &cobra.Command{
 
 		if err := generator.CreateProject(config); err != nil {
 			if errors.Is(err, generator.ErrMigrationsSkipped) {
-				cli.Newline()
-				cli.Warning("Project ready - database setup pending")
-				cli.NextSteps([]string{
+				prism.Newline()
+				prism.Warning("Project ready - database setup pending")
+				prism.NextSteps([]string{
 					"Start your database server",
 					fmt.Sprintf("cd %s", projectName),
 					"./vel migrate",
@@ -140,24 +140,24 @@ var NewCmd = &cobra.Command{
 				})
 				return
 			}
-			cli.Newline()
-			cli.Error(err.Error())
+			prism.Newline()
+			prism.Error(err.Error())
 			return
 		}
 
-		cli.Newline()
-		cli.Success("Project ready")
-		cli.NextSteps([]string{
+		prism.Newline()
+		prism.Success("Project ready")
+		prism.NextSteps([]string{
 			fmt.Sprintf("cd %s", projectName),
 			"./vel serve",
 		})
-		cli.KeyValue("App", cli.Highlight("http://localhost:4000"))
+		prism.KeyValue("App", prism.Highlight("http://localhost:4000"))
 		if !config.API {
-			cli.KeyValue("Vite", cli.Highlight("http://localhost:5173"))
+			prism.KeyValue("Vite", prism.Highlight("http://localhost:5173"))
 		}
-		cli.Newline()
-		cli.Muted("More: ./vel migrate, ./vel route:list, ./vel make:handler")
-		cli.Newline()
+		prism.Newline()
+		prism.Muted("More: ./vel migrate, ./vel route:list, ./vel make:handler")
+		prism.Newline()
 	},
 }
 

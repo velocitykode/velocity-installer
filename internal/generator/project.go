@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/ui"
 )
 
@@ -224,46 +224,46 @@ func CreateProject(config ProjectConfig) error {
 		moduleName = config.Name
 	}
 
-	cli.Info("Creating new Velocity project")
+	prism.Info("Creating new Velocity project")
 
 	// Clone template
-	if err := cli.Spinner("Cloning template", func() error {
+	if err := prism.Spinner("Cloning template", func() error {
 		return cloneTemplate(config.Name, config.API, config.Stack)
 	}); err != nil {
 		return fmt.Errorf("failed to clone template: %w", err)
 	}
-	cli.Success("Template cloned")
+	prism.Success("Template cloned")
 
 	// Replace module name in all files
-	if err := cli.Spinner("Configuring module", func() error {
+	if err := prism.Spinner("Configuring module", func() error {
 		return replaceModuleName(config.Name, moduleName)
 	}); err != nil {
 		return fmt.Errorf("failed to configure project: %w", err)
 	}
-	cli.Success("Module configured")
+	prism.Success("Module configured")
 
 	// Remove template git history and initialize new repo
-	if err := cli.Spinner("Initializing Git", func() error {
+	if err := prism.Spinner("Initializing Git", func() error {
 		return reinitGitRepo(config.Name)
 	}); err != nil {
 		return fmt.Errorf("failed to initialize git: %w", err)
 	}
-	cli.Success("Git initialized")
+	prism.Success("Git initialized")
 
 	// Create default migrations
 	if err := createDefaultMigrations(config.Name); err != nil {
 		return fmt.Errorf("failed to create migrations: %w", err)
 	}
-	cli.Success("Migrations created")
+	prism.Success("Migrations created")
 
 	// Create proper .env.example with database config
 	if err := createEnvFiles(config); err != nil {
 		return fmt.Errorf("failed to create env files: %w", err)
 	}
-	cli.Success("Environment configured")
+	prism.Success("Environment configured")
 
-	cli.Newline()
-	cli.Info("Installing dependencies")
+	prism.Newline()
+	prism.Info("Installing dependencies")
 	// installDependencies now also runs `go build -o vel .` concurrently
 	// with the JS install. APP_KEY is already written to .env by
 	// createEnvFiles, so `./vel` can bootstrap cleanly.
@@ -271,7 +271,7 @@ func CreateProject(config ProjectConfig) error {
 		return fmt.Errorf("failed to install dependencies: %w", err)
 	}
 
-	cli.Newline()
+	prism.Newline()
 	ready, err := ensureDatabaseReady(config.Name)
 	if err != nil {
 		return fmt.Errorf("failed to prepare database: %w", err)
@@ -282,12 +282,12 @@ func CreateProject(config ProjectConfig) error {
 		return ErrMigrationsSkipped
 	}
 
-	cli.Newline()
-	cli.Info("Running migrations")
+	prism.Newline()
+	prism.Info("Running migrations")
 	if err := runVel(config.Name, "migrate"); err != nil {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
-	cli.Success("Migrations complete")
+	prism.Success("Migrations complete")
 
 	return nil
 }
@@ -639,9 +639,9 @@ func renderGroup(prefix, name string, tail []string, count int, done bool, withP
 	}
 	for _, pkg := range tail {
 		fmt.Printf("  %s %s %s\n",
-			cli.StyleMuted(childPrefix),
-			cli.StyleMuted("•"),
-			cli.StyleMuted(truncate(pkg, 68)),
+			prism.StyleMuted(childPrefix),
+			prism.StyleMuted("•"),
+			prism.StyleMuted(truncate(pkg, 68)),
 		)
 		lines++
 	}
@@ -676,7 +676,7 @@ func installDependencies(projectPath string, apiOnly bool) error {
 	// Printing before the tree so it stays above the in-place redraws.
 	if !apiOnly {
 		if _, err := exec.LookPath("bun"); err != nil {
-			cli.Tip("Install bun for much faster JS installs → https://bun.sh")
+			prism.Tip("Install bun for much faster JS installs → https://bun.sh")
 		}
 	}
 
@@ -852,7 +852,7 @@ func initGoModule(config ProjectConfig) error {
 		return err
 	}
 
-	cli.Step("Configuring dependencies...")
+	prism.Step("Configuring dependencies...")
 
 	// Check if local Velocity exists and use replace directive
 	velocityPath := "/Users/ali/code/velocity"
@@ -860,7 +860,7 @@ func initGoModule(config ProjectConfig) error {
 		// Add replace directive for local development
 		cmd = exec.Command("go", "mod", "edit", "-replace", "github.com/velocitykode/velocity="+velocityPath)
 		cmd.Run()
-		cli.Info("Using local Velocity framework")
+		prism.Info("Using local Velocity framework")
 	} else {
 		// Try to get latest from GitHub (requires GOPRIVATE for private
 		// repos). The init/repair path - unlike the new-project path,
@@ -869,29 +869,29 @@ func initGoModule(config ProjectConfig) error {
 		// @latest and lets the developer adjust afterward.
 		cmd = exec.Command("go", "get", "github.com/velocitykode/velocity@latest")
 		if err := cmd.Run(); err != nil {
-			cli.Warning("Note: Configure GOPRIVATE for private repo access")
+			prism.Warning("Note: Configure GOPRIVATE for private repo access")
 		}
 	}
 
 	// Add other dependencies based on features
 	if config.Database == "postgres" {
-		cli.Info("PostgreSQL driver")
+		prism.Info("PostgreSQL driver")
 		exec.Command("go", "get", "github.com/lib/pq").Run()
 	} else if config.Database == "mysql" {
-		cli.Info("MySQL driver")
+		prism.Info("MySQL driver")
 		exec.Command("go", "get", "github.com/go-sql-driver/mysql").Run()
 	} else if config.Database == "sqlite" {
-		cli.Info("SQLite driver")
+		prism.Info("SQLite driver")
 		exec.Command("go", "get", "github.com/mattn/go-sqlite3").Run()
 	}
 
 	if config.Cache == "redis" {
-		cli.Info("Redis client")
+		prism.Info("Redis client")
 		exec.Command("go", "get", "github.com/redis/go-redis/v9").Run()
 	}
 
 	// Run go mod tidy
-	cli.Step("Tidying up dependencies...")
+	prism.Step("Tidying up dependencies...")
 	exec.Command("go", "mod", "tidy").Run()
 
 	return nil
@@ -908,33 +908,33 @@ func initGitRepo(projectPath string) {
 
 // InitProject adds Velocity structure to an existing Go project
 func InitProject(config ProjectConfig, targetDir string) error {
-	cli.Step("Setting up Velocity structure...")
+	prism.Step("Setting up Velocity structure...")
 	// Create directory structure in existing directory
 	if err := createDirectoryStructure(targetDir); err != nil {
 		return fmt.Errorf("failed to create directory structure: %w", err)
 	}
-	cli.Success("Velocity structure created")
+	prism.Success("Velocity structure created")
 
-	cli.Step("Generating application files...")
+	prism.Step("Generating application files...")
 	// Generate files from stubs (skip if exists to preserve existing code)
 	if err := generateFilesFromStubs(config); err != nil {
 		return fmt.Errorf("failed to generate files: %w", err)
 	}
-	cli.Success("Application files generated")
+	prism.Success("Application files generated")
 
-	cli.Step("Creating configuration files...")
+	prism.Step("Creating configuration files...")
 	// Generate config files if they don't exist
 	if err := generateProjectFiles(config); err != nil {
 		return fmt.Errorf("failed to generate project files: %w", err)
 	}
-	cli.Success("Configuration files created")
+	prism.Success("Configuration files created")
 
-	cli.Step("Adding Velocity dependencies...")
+	prism.Step("Adding Velocity dependencies...")
 	// Add dependencies to existing go.mod
 	if err := addVelocityDependencies(config, targetDir); err != nil {
 		return fmt.Errorf("failed to add dependencies: %w", err)
 	}
-	cli.Success("Dependencies added")
+	prism.Success("Dependencies added")
 
 	return nil
 }
@@ -1243,7 +1243,7 @@ func addVelocityDependencies(config ProjectConfig, projectPath string) error {
 	os.Chdir(projectPath)
 	defer os.Chdir(originalDir)
 
-	cli.Step("Configuring dependencies...")
+	prism.Step("Configuring dependencies...")
 
 	// Check if local Velocity exists and use replace directive
 	velocityPath := "/Users/ali/code/velocity"
@@ -1251,34 +1251,34 @@ func addVelocityDependencies(config ProjectConfig, projectPath string) error {
 		// Add replace directive for local development
 		cmd := exec.Command("go", "mod", "edit", "-replace", "github.com/velocitykode/velocity="+velocityPath)
 		cmd.Run()
-		cli.Info("Using local Velocity framework")
+		prism.Info("Using local Velocity framework")
 	} else {
 		// Try to get from GitHub
 		cmd := exec.Command("go", "get", "github.com/velocitykode/velocity")
 		if err := cmd.Run(); err != nil {
-			cli.Warning("Note: Configure GOPRIVATE for private repo access")
+			prism.Warning("Note: Configure GOPRIVATE for private repo access")
 		}
 	}
 
 	// Add other dependencies based on features
 	if config.Database == "postgres" {
-		cli.Info("PostgreSQL driver")
+		prism.Info("PostgreSQL driver")
 		exec.Command("go", "get", "github.com/lib/pq").Run()
 	} else if config.Database == "mysql" {
-		cli.Info("MySQL driver")
+		prism.Info("MySQL driver")
 		exec.Command("go", "get", "github.com/go-sql-driver/mysql").Run()
 	} else if config.Database == "sqlite" {
-		cli.Info("SQLite driver")
+		prism.Info("SQLite driver")
 		exec.Command("go", "get", "github.com/mattn/go-sqlite3").Run()
 	}
 
 	if config.Cache == "redis" {
-		cli.Info("Redis client")
+		prism.Info("Redis client")
 		exec.Command("go", "get", "github.com/redis/go-redis/v9").Run()
 	}
 
 	// Run go mod tidy
-	cli.Step("Tidying up dependencies...")
+	prism.Step("Tidying up dependencies...")
 	exec.Command("go", "mod", "tidy").Run()
 
 	return nil

@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/banner"
 )
 
@@ -15,12 +15,12 @@ import (
 // to cobra's plain-text help.
 func RenderHome(root *cobra.Command) {
 	fmt.Println(banner.Simple())
-	fmt.Println(cli.StyleMuted("       The Official Installer for Velocity Web Framework"))
-	cli.Newline()
+	fmt.Println(prism.StyleMuted("       The Official Installer for Velocity Web Framework"))
+	prism.Newline()
 
 	section("USAGE")
-	cli.Muted(fmt.Sprintf("%s <command> [flags]", root.Name()))
-	cli.Newline()
+	prism.Muted(fmt.Sprintf("%s <command> [flags]", root.Name()))
+	prism.Newline()
 
 	section("COMMANDS")
 	cmds := visibleSubcommands(root)
@@ -28,7 +28,7 @@ func RenderHome(root *cobra.Command) {
 	for _, c := range cmds {
 		row(c.Name(), c.Short, cmdPad)
 	}
-	cli.Newline()
+	prism.Newline()
 
 	section("FLAGS")
 	flags := []struct{ label, desc string }{
@@ -44,19 +44,19 @@ func RenderHome(root *cobra.Command) {
 	for _, f := range flags {
 		row(f.label, f.desc, flagPad)
 	}
-	cli.Newline()
+	prism.Newline()
 
-	cli.Muted(fmt.Sprintf(`Run "%s <command> --help" for command-specific options.`, root.Name()))
-	cli.Newline()
+	prism.Muted(fmt.Sprintf(`Run "%s <command> --help" for command-specific options.`, root.Name()))
+	prism.Newline()
 }
 
 func section(title string) {
-	fmt.Println(cli.StylePrimary(title))
+	fmt.Println(prism.StylePrimary(title))
 }
 
 func row(label, desc string, pad int) {
 	padding := strings.Repeat(" ", pad-len(label))
-	fmt.Printf("  %s%s  %s\n", cli.StylePrimary(label), padding, cli.StyleMuted(desc))
+	fmt.Printf("  %s%s  %s\n", prism.StylePrimary(label), padding, prism.StyleMuted(desc))
 }
 
 func visibleSubcommands(root *cobra.Command) []*cobra.Command {

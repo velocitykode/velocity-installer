@@ -20,7 +20,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 )
 
 var SelfUpdateCmd = &cobra.Command{
@@ -47,7 +47,7 @@ var (
 )
 
 func runSelfUpdate(cmd *cobra.Command, args []string) error {
-	cli.Header("self-update")
+	prism.Header("self-update")
 
 	execPath, err := os.Executable()
 	if err != nil {
@@ -58,15 +58,15 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 	}
 
 	if isHomebrewInstall(execPath) {
-		cli.Warning("Detected Homebrew install at " + execPath)
-		cli.Muted("Use `brew upgrade --cask velocity` to update.")
+		prism.Warning("Detected Homebrew install at " + execPath)
+		prism.Muted("Use `brew upgrade --cask velocity` to update.")
 		return nil
 	}
 
-	cli.Step("Checking for updates...")
+	prism.Step("Checking for updates...")
 	release, err := fetchLatestRelease()
 	if errors.Is(err, errReleaseMissing) {
-		cli.Info("No releases found yet")
+		prism.Info("No releases found yet")
 		return nil
 	}
 	if err != nil {
@@ -76,10 +76,10 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 	latestVersion := strings.TrimPrefix(release.TagName, "v")
 	currentVersion := strings.TrimPrefix(InstallerVersion, "v")
 	if latestVersion == currentVersion {
-		cli.Success(fmt.Sprintf("Already up to date (v%s)", currentVersion))
+		prism.Success(fmt.Sprintf("Already up to date (v%s)", currentVersion))
 		return nil
 	}
-	cli.Info(fmt.Sprintf("New version available: v%s (current: v%s)", latestVersion, currentVersion))
+	prism.Info(fmt.Sprintf("New version available: v%s (current: v%s)", latestVersion, currentVersion))
 
 	assetName := fmt.Sprintf("velocity-%s-%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	var archiveURL, checksumURL string
@@ -95,16 +95,16 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("no binary available for %s/%s", runtime.GOOS, runtime.GOARCH)
 	}
 
-	cli.Step("Downloading update...")
+	prism.Step("Downloading update...")
 	archiveBytes, err := downloadBytes(archiveURL)
 	if err != nil {
 		return fmt.Errorf("failed to download update: %w", err)
 	}
 
 	if checksumURL == "" {
-		cli.Warning("checksums.txt missing in release; skipping verification")
+		prism.Warning("checksums.txt missing in release; skipping verification")
 	} else {
-		cli.Step("Verifying checksum...")
+		prism.Step("Verifying checksum...")
 		checksumBytes, err := downloadBytes(checksumURL)
 		if err != nil {
 			return fmt.Errorf("failed to download checksums: %w", err)
@@ -120,13 +120,13 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	cli.Step("Extracting binary...")
+	prism.Step("Extracting binary...")
 	binaryBytes, err := extractBinary(archiveBytes, "velocity")
 	if err != nil {
 		return fmt.Errorf("failed to extract binary: %w", err)
 	}
 
-	cli.Step("Installing update...")
+	prism.Step("Installing update...")
 	if err := installBinary(execPath, binaryBytes); err != nil {
 		return fmt.Errorf("failed to install update: %w", err)
 	}
@@ -135,7 +135,7 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 		_ = exec.Command("xattr", "-dr", "com.apple.quarantine", execPath).Run()
 	}
 
-	cli.Success(fmt.Sprintf("Updated to v%s", latestVersion))
+	prism.Success(fmt.Sprintf("Updated to v%s", latestVersion))
 	return nil
 }
 

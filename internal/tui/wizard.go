@@ -1,46 +1,46 @@
-// Package tui drives the interactive "velocity new" wizard using velocity-cli prompts.
+// Package tui drives the interactive "velocity new" wizard using prism prompts.
 package tui
 
 import (
 	"errors"
 	"fmt"
 
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/generator"
 )
 
 // LaunchNewProjectWizard runs the interactive wizard to collect project config,
 // then creates the project.
 func LaunchNewProjectWizard(projectName string) {
-	cli.Header("velocity new")
+	prism.Header("velocity new")
 
 	if projectName == "" {
-		projectName = cli.Text(
+		projectName = prism.Text(
 			"Project name:",
-			cli.WithRequired(),
-			cli.WithPlaceholder("my-awesome-app"),
+			prism.WithRequired(),
+			prism.WithPlaceholder("my-awesome-app"),
 		)
 	}
 
-	database := cli.Select(
+	database := prism.Select(
 		"Database:",
 		[]string{"postgres", "mysql", "sqlite", "none"},
-		cli.WithSelectDefault("postgres"),
+		prism.WithSelectDefault("postgres"),
 	)
 	if database == "none" {
 		database = ""
 	}
 
-	cache := cli.Select(
+	cache := prism.Select(
 		"Cache:",
 		[]string{"redis", "memory", "none"},
-		cli.WithSelectDefault("redis"),
+		prism.WithSelectDefault("redis"),
 	)
 	if cache == "none" {
 		cache = ""
 	}
 
-	features := cli.Multiselect(
+	features := prism.Multiselect(
 		"Features (space to toggle, enter to confirm):",
 		[]string{"auth", "api-only"},
 	)
@@ -52,39 +52,39 @@ func LaunchNewProjectWizard(projectName string) {
 	stack := ""
 	ssr := false
 	if !featureSet["api-only"] {
-		stack = cli.Select(
+		stack = prism.Select(
 			"Frontend stack:",
 			generator.ValidStacks,
-			cli.WithSelectDefault("react"),
+			prism.WithSelectDefault("react"),
 		)
-		ssr = cli.Confirm("Enable Inertia server-side rendering?", cli.WithDefaultNo())
+		ssr = prism.Confirm("Enable Inertia server-side rendering?", prism.WithDefaultNo())
 	}
 
-	cli.Newline()
-	cli.Bold("Review:")
-	cli.KeyValue("Project", cli.Highlight(projectName))
+	prism.Newline()
+	prism.Bold("Review:")
+	prism.KeyValue("Project", prism.Highlight(projectName))
 	if database != "" {
-		cli.KeyValue("Database", database)
+		prism.KeyValue("Database", database)
 	}
 	if cache != "" {
-		cli.KeyValue("Cache", cache)
+		prism.KeyValue("Cache", cache)
 	}
 	if featureSet["auth"] {
-		cli.KeyValue("Auth", "yes")
+		prism.KeyValue("Auth", "yes")
 	}
 	if featureSet["api-only"] {
-		cli.KeyValue("API-only", "yes")
+		prism.KeyValue("API-only", "yes")
 	}
 	if stack != "" {
-		cli.KeyValue("Stack", stack)
+		prism.KeyValue("Stack", stack)
 	}
 	if ssr {
-		cli.KeyValue("SSR", "yes")
+		prism.KeyValue("SSR", "yes")
 	}
-	cli.Newline()
+	prism.Newline()
 
-	if !cli.Confirm("Create project?", cli.WithDefaultYes()) {
-		cli.Warning("Cancelled.")
+	if !prism.Confirm("Create project?", prism.WithDefaultYes()) {
+		prism.Warning("Cancelled.")
 		return
 	}
 
@@ -100,7 +100,7 @@ func LaunchNewProjectWizard(projectName string) {
 	}
 
 	if err := generator.CreateProject(config); err != nil && !errors.Is(err, generator.ErrMigrationsSkipped) {
-		cli.Error(fmt.Sprintf("Error creating project: %v", err))
+		prism.Error(fmt.Sprintf("Error creating project: %v", err))
 		return
 	}
 
@@ -116,7 +116,7 @@ func CreateProjectWithDefaults(projectName string) {
 	}
 
 	if err := generator.CreateProject(config); err != nil && !errors.Is(err, generator.ErrMigrationsSkipped) {
-		cli.Error(fmt.Sprintf("Error creating project: %v", err))
+		prism.Error(fmt.Sprintf("Error creating project: %v", err))
 		return
 	}
 
@@ -124,15 +124,15 @@ func CreateProjectWithDefaults(projectName string) {
 }
 
 func showSuccess(projectName string) {
-	cli.Newline()
-	cli.Success("Project created successfully!")
-	cli.Newline()
-	cli.Bold(fmt.Sprintf("Your Velocity project '%s' is ready.", projectName))
-	cli.Newline()
-	cli.NextSteps([]string{
+	prism.Newline()
+	prism.Success("Project created successfully!")
+	prism.Newline()
+	prism.Bold(fmt.Sprintf("Your Velocity project '%s' is ready.", projectName))
+	prism.Newline()
+	prism.NextSteps([]string{
 		"cd " + projectName,
 		"go run . serve",
 	})
-	cli.Muted("Default port: 4000 (set APP_PORT env to change)")
-	cli.Newline()
+	prism.Muted("Default port: 4000 (set APP_PORT env to change)")
+	prism.Newline()
 }

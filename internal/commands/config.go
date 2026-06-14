@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/config"
 )
 
@@ -22,9 +22,9 @@ var configSetCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 2 {
-			cli.Error("Key and value are required")
-			cli.Newline()
-			cli.Muted("Usage: velocity config set <key> <value>")
+			prism.Error("Key and value are required")
+			prism.Newline()
+			prism.Muted("Usage: velocity config set <key> <value>")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -39,9 +39,9 @@ var configGetCmd = &cobra.Command{
 	SilenceErrors: true,
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) < 1 {
-			cli.Error("Key is required")
-			cli.Newline()
-			cli.Muted("Usage: velocity config get <key>")
+			prism.Error("Key is required")
+			prism.Newline()
+			prism.Muted("Usage: velocity config get <key>")
 			return fmt.Errorf("")
 		}
 		return nil
@@ -107,10 +107,10 @@ func runConfigSet(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to save config: %w", err)
 	}
 
-	cli.Success(fmt.Sprintf("Set %s = %s", key, value))
+	prism.Success(fmt.Sprintf("Set %s = %s", key, value))
 
 	path, _ := config.ConfigPath()
-	cli.Muted(fmt.Sprintf("Configuration saved to %s", path))
+	prism.Muted(fmt.Sprintf("Configuration saved to %s", path))
 
 	return nil
 }
@@ -148,9 +148,9 @@ func runConfigGet(cmd *cobra.Command, args []string) error {
 	}
 
 	if value == "" || value == "false" {
-		cli.Muted("(not set)")
+		prism.Muted("(not set)")
 	} else {
-		cli.Info(value)
+		prism.Info(value)
 	}
 
 	return nil
@@ -163,22 +163,22 @@ func runConfigList(cmd *cobra.Command, args []string) error {
 	}
 
 	path, _ := config.ConfigPath()
-	cli.Info(fmt.Sprintf("Configuration (%s)", path))
+	prism.Info(fmt.Sprintf("Configuration (%s)", path))
 
 	if cfg.Defaults.Database != "" {
-		cli.KeyValue("default.database", cfg.Defaults.Database)
+		prism.KeyValue("default.database", cfg.Defaults.Database)
 	}
 	if cfg.Defaults.Cache != "" {
-		cli.KeyValue("default.cache", cfg.Defaults.Cache)
+		prism.KeyValue("default.cache", cfg.Defaults.Cache)
 	}
 	if cfg.Defaults.Queue != "" {
-		cli.KeyValue("default.queue", cfg.Defaults.Queue)
+		prism.KeyValue("default.queue", cfg.Defaults.Queue)
 	}
 	if cfg.Defaults.Auth {
-		cli.KeyValue("default.auth", "true")
+		prism.KeyValue("default.auth", "true")
 	}
 	if cfg.Defaults.API {
-		cli.KeyValue("default.api", "true")
+		prism.KeyValue("default.api", "true")
 	}
 
 	return nil
@@ -194,8 +194,8 @@ func runConfigReset(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to reset config: %w", err)
 	}
 
-	cli.Success("Configuration reset")
-	cli.Muted(fmt.Sprintf("Deleted %s", path))
+	prism.Success("Configuration reset")
+	prism.Muted(fmt.Sprintf("Deleted %s", path))
 
 	return nil
 }

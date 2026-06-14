@@ -5,8 +5,8 @@ go 1.26.3
 require (
 	github.com/gofrs/flock v0.13.0
 	github.com/spf13/cobra v1.10.2
+	github.com/velocitykode/prism v0.16.0
 	github.com/velocitykode/velocity v0.50.0
-	github.com/velocitykode/velocity-cli v0.15.1
 	golang.org/x/mod v0.31.0
 	golang.org/x/term v0.38.0
 	gopkg.in/yaml.v3 v3.0.1

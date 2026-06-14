@@ -1,12 +1,12 @@
 package banner
 
 import (
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 )
 
 // Simple returns a simple ASCII banner
 func Simple() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝
@@ -18,7 +18,7 @@ func Simple() string {
 
 // Block returns a blocky ASCII banner
 func Block() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 █▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀█
 █                                                        █
 █  ██    ██ ███████ ██       ██████   ██████ ██ ████████▄█
@@ -28,13 +28,13 @@ func Block() string {
 █    ████   ███████ ███████  ██████   ██████ ██    ██    █
 █                                                        █
 █▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄█
-`) + cli.StylePrimary(`
+`) + prism.StylePrimary(`
       The Go Web Framework for Rapid Development`)
 }
 
 // CompactBox returns a compact boxed ASCII banner
 func CompactBox() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ╔══════════════════════════════════════╗
 ║  ▌ ▌▛▀▌▌  ▞▀▖▞▀▖▀▛▘▀▛▘▌ ▌          ║
 ║  ▚▞ ▙▄ ▌  ▌ ▌▌  ▌▌  ▌ ▝▞           ║
@@ -44,7 +44,7 @@ func CompactBox() string {
 
 // Retro returns a retro-style ASCII banner
 func Retro() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
  ▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄
  ██                                                         ██
  ██  ██    ██ ████████ ██       ███████  ███████ ████ ███████
@@ -58,11 +58,11 @@ func Retro() string {
 
 // Shadow returns a shadow-style ASCII banner
 func Shadow() string {
-	return cli.StylePrimary(`
+	return prism.StylePrimary(`
 ██╗   ██╗███████╗██╗      ██████╗  ██████╗██╗████████╗██╗   ██╗
 ██║   ██║██╔════╝██║     ██╔═══██╗██╔════╝██║╚══██╔══╝╚██╗ ██╔╝
 ██║   ██║█████╗  ██║     ██║   ██║██║     ██║   ██║    ╚████╔╝
 ╚██╗ ██╔╝██╔══╝  ██║     ██║   ██║██║     ██║   ██║     ╚██╔╝
  ╚████╔╝ ███████╗███████╗╚██████╔╝╚██████╗██║   ██║      ██║   `) + "\n" +
-		cli.StyleMuted(` ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝   `)
+		prism.StyleMuted(` ╚═══╝  ╚══════╝╚══════╝ ╚═════╝  ╚═════╝╚═╝   ╚═╝      ╚═╝   `)
 }

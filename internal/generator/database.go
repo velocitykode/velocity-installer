@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 )
 
 type dbEnv struct {
@@ -86,27 +86,27 @@ func ensureDatabaseReady(projectPath string) (ready bool, err error) {
 	}
 	target := net.JoinHostPort(env.Host, env.Port)
 
-	cli.Info(fmt.Sprintf("Checking %s server at %s", label, target))
+	prism.Info(fmt.Sprintf("Checking %s server at %s", label, target))
 	conn, dialErr := net.DialTimeout("tcp", target, 3*time.Second)
 	if dialErr != nil {
-		cli.Warning(fmt.Sprintf("%s not reachable at %s", label, target))
-		cli.Muted(fmt.Sprintf("Start %s, then run: cd %s && ./vel migrate", label, projectPath))
+		prism.Warning(fmt.Sprintf("%s not reachable at %s", label, target))
+		prism.Muted(fmt.Sprintf("Start %s, then run: cd %s && ./vel migrate", label, projectPath))
 		return false, nil
 	}
 	_ = conn.Close()
-	cli.Success(fmt.Sprintf("%s server reachable", label))
+	prism.Success(fmt.Sprintf("%s server reachable", label))
 
-	cli.Info(fmt.Sprintf("Creating database %s", env.Database))
+	prism.Info(fmt.Sprintf("Creating database %s", env.Database))
 	created, createErr := createDatabase(env)
 	if createErr != nil {
-		cli.Warning(fmt.Sprintf("Could not create database %s: %s", env.Database, createErr))
-		cli.Muted(fmt.Sprintf("Create it manually, then run: cd %s && ./vel migrate", projectPath))
+		prism.Warning(fmt.Sprintf("Could not create database %s: %s", env.Database, createErr))
+		prism.Muted(fmt.Sprintf("Create it manually, then run: cd %s && ./vel migrate", projectPath))
 		return false, nil
 	}
 	if created {
-		cli.Success(fmt.Sprintf("Database %s created", env.Database))
+		prism.Success(fmt.Sprintf("Database %s created", env.Database))
 	} else {
-		cli.Success(fmt.Sprintf("Database %s already exists", env.Database))
+		prism.Success(fmt.Sprintf("Database %s already exists", env.Database))
 	}
 	return true, nil
 }

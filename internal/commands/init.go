@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
-	cli "github.com/velocitykode/velocity-cli"
+	"github.com/velocitykode/prism"
 	"github.com/velocitykode/velocity-installer/internal/config"
 	"github.com/velocitykode/velocity-installer/internal/detector"
 	"github.com/velocitykode/velocity-installer/internal/generator"
@@ -35,7 +35,7 @@ func init() {
 }
 
 func runInit(cmd *cobra.Command, args []string) error {
-	cli.Header("init")
+	prism.Header("init")
 
 	// Get current working directory
 	cwd, err := os.Getwd()
@@ -44,7 +44,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Detect project
-	cli.Info("Detecting Go project...")
+	prism.Info("Detecting Go project...")
 	info, err := detector.Detect(cwd)
 	if err != nil {
 		return fmt.Errorf("not a Go project\n\nThis directory does not contain a go.mod file.\nInitialize a Go module first:\n  go mod init github.com/yourname/project\n\nThen run 'velocity init' again.")
@@ -54,7 +54,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("Velocity already initialized\n\nThis project already has Velocity structure (app/, config/, routes/).\n\nIf you want to create a new project, use:\n  velocity new project-name")
 	}
 
-	cli.Success(fmt.Sprintf("Detected Go project: %s", info.ModuleName))
+	prism.Success(fmt.Sprintf("Detected Go project: %s", info.ModuleName))
 
 	// Load config defaults
 	cfg, _ := config.Load()
@@ -100,9 +100,9 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	// Success message
-	cli.Newline()
-	cli.Success("Velocity initialized successfully!")
-	cli.NextSteps([]string{
+	prism.Newline()
+	prism.Success("Velocity initialized successfully!")
+	prism.NextSteps([]string{
 		"go mod download",
 		"./vel serve",
 	})
