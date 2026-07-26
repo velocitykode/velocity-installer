@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.57] - 2026-07-26
+
+### Changed
+- chore: update velocity to v0.72.0
+
 ## [0.21.56] - 2026-07-26
 
 ## [0.21.55] - 2026-07-26
