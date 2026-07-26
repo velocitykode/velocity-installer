@@ -6,7 +6,7 @@ require (
 	github.com/gofrs/flock v0.13.0
 	github.com/spf13/cobra v1.10.2
 	github.com/velocitykode/prism v0.16.0
-	github.com/velocitykode/velocity v0.71.0
+	github.com/velocitykode/velocity v0.72.0
 	golang.org/x/mod v0.37.0
 	golang.org/x/term v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
