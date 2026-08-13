@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.61] - 2026-08-13
+
+### Fixed
+- name the real env var in the --ssr flag help
+
 ## [0.21.60] - 2026-08-13
 
 ### Fixed
