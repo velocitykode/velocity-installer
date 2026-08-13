@@ -170,6 +170,6 @@ func init() {
 	NewCmd.Flags().StringVar(&cache, "cache", "memory", "Cache driver (redis, memory)")
 	NewCmd.Flags().BoolVar(&api, "api", false, "Create API-only project (no frontend)")
 	NewCmd.Flags().StringVar(&stack, "stack", "react", "Frontend stack for full-stack projects (react, vue)")
-	NewCmd.Flags().BoolVar(&ssr, "ssr", false, "Enable Inertia server-side rendering (sets INERTIA_SSR_ENABLED=true and wires Vite SSR)")
+	NewCmd.Flags().BoolVar(&ssr, "ssr", false, "Enable Inertia server-side rendering (sets VIEW_SSR_ENABLED=true and wires Vite SSR)")
 	NewCmd.Flags().BoolVarP(&nonInteractive, "non-interactive", "y", false, "Skip all prompts; use flag values or defaults")
 }
