@@ -1,9 +1,0 @@
-package controllers
-
-import (
-	"github.com/velocitykode/velocity/router"
-)
-
-func Home(ctx *router.Context) error {
-	return ctx.String(200, "Welcome to Velocity!")
-}

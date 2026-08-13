@@ -156,7 +156,7 @@ var NewCmd = &cobra.Command{
 			prism.KeyValue("Vite", prism.Highlight("http://localhost:5173"))
 		}
 		prism.Newline()
-		prism.Muted("More: ./vel migrate, ./vel route:list, ./vel make:handler")
+		prism.Muted("More: ./vel migrate, ./vel routes, ./vel gen handler")
 		prism.Newline()
 	},
 }

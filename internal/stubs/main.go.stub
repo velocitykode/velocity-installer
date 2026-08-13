@@ -3,25 +3,34 @@ package main
 import (
 	"log"
 
-	"{{.Module}}/internal/app"
+	"{{.Module}}/internal/middleware"
 	"{{.Module}}/routes"
 
 	"github.com/velocitykode/velocity"
+
+	// Standard driver bundles. Heavy drivers live in opt-in leaves and do
+	// not auto-register; blank-importing each subsystem's `standard` bundle
+	// registers every driver (memory/file + redis cache, modernc/postgres/
+	// mysql/sqlite orm, memory/redis/database queue, local/s3 storage) so
+	// .env can select any of them at runtime.
+	_ "github.com/velocitykode/velocity/cache/standard"
+	_ "github.com/velocitykode/velocity/orm/standard"
+	_ "github.com/velocitykode/velocity/queue/standard"
+	_ "github.com/velocitykode/velocity/storage/standard"
 )
 
 func main() {
-	v, err := velocity.Default()
+	v, err := velocity.New()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if err := app.Bootstrap(v); err != nil {
-		log.Fatal(err)
-	}
-
-	routes.Register(v)
-
-	if err := v.Run(); err != nil {
+	if err := v.
+		Middleware(func(m *velocity.MiddlewareStack) {
+			m.Global(middleware.LoggingMiddleware)
+		}).
+		Routes(routes.Register).
+		Serve(); err != nil {
 		log.Fatal(err)
 	}
 }

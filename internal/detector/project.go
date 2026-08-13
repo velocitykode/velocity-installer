@@ -64,8 +64,8 @@ func hasVelocityModule() bool {
 func hasVelocityStructure() bool {
 	// Check for Velocity-specific directories
 	velocityDirs := []string{
-		"app/controllers",
-		"app/models",
+		"internal/handlers",
+		"internal/models",
 		"routes",
 		"database/migrations",
 	}

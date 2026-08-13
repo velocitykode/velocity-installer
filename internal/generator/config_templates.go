@@ -51,7 +51,7 @@ LOG_LEVEL=info
 #
 # APP_KEY MUST carry the "base64:" prefix so velocity/crypto base64-
 # decodes it back to the 32 raw bytes the AES driver requires. Use
-# ` + "`vel key:generate`" + ` to (re)mint it; pasting a raw base64 value
+# ` + "`vel key generate`" + ` to (re)mint it; pasting a raw base64 value
 # without the prefix will fail boot with ErrInvalidKeyLength.
 # QUEUE_SIGNING_KEY and AUTH_JWT_SECRET are consumed as raw HMAC
 # bytes and stay unprefixed.
@@ -59,6 +59,11 @@ APP_KEY={{ .AppKey }}
 QUEUE_SIGNING_KEY={{ .QueueSigningKey }}
 AUTH_JWT_SECRET={{ .AuthJWTSecret }}
 CRYPTO_CIPHER=AES-256-GCM
+
+# Auth - names the default scheme (session-backed "web" for browser apps,
+# JWT-backed "api" for API-only apps). ConfigFromEnv only builds the
+# scheme configs when AUTH_SCHEME is set.
+AUTH_SCHEME={{ if .API }}api{{ else }}web{{ end }}
 
 # Enable to revoke blacklisted JWT IDs.
 AUTH_JWT_BLACKLIST_ENABLED=false
@@ -262,7 +267,7 @@ go run main.go
 
 Or using the Velocity CLI:
 ` + "```bash" + `
-velocity serve
+./vel serve
 ` + "```" + `
 
 ### Production
@@ -277,14 +282,13 @@ The application will start on http://localhost:4000 by default.
 
 ` + "```" + `
 .
-├── app/
-│   ├── controllers/    # HTTP controllers
-│   ├── middleware/      # HTTP middleware
-│   └── models/          # Data models
 ├── config/              # Configuration files
 ├── database/            # Database migrations and seeds
+├── internal/
+│   ├── handlers/        # HTTP handlers
+│   ├── middleware/      # HTTP middleware
+│   └── models/          # Data models
 ├── public/              # Static assets
-├── resources/           # Views and resources
 ├── routes/              # Route definitions
 ├── storage/             # File storage and logs
 └── main.go              # Application entry point

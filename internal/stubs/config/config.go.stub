@@ -1,52 +1,26 @@
 package config
 
-import (
-	"os"
+import "os"
 
-	"github.com/velocitykode/velocity/log"
-)
-
-// Config holds application configuration
-type Config struct {
-	Port     string
-	AppName  string
-	AppEnv   string
-	AppDebug bool
+// GetAppName returns the app name (read at call time).
+func GetAppName() string {
+	return envOr("APP_NAME", "{{.Name}}")
 }
 
-// Load reads configuration from environment
-func Load() *Config {
-	cfg := &Config{
-		Port:     getEnv("APP_PORT", "4000"),
-		AppName:  getEnv("APP_NAME", "{{.Name}}"),
-		AppEnv:   getEnv("APP_ENV", "development"),
-		AppDebug: getEnvBool("APP_DEBUG", true),
-	}
-
-	// Log configuration loaded
-	log.Info("Configuration loaded",
-		"app", cfg.AppName,
-		"env", cfg.AppEnv,
-		"port", cfg.Port,
-		"debug", cfg.AppDebug,
-	)
-
-	return cfg
+// GetAppEnv returns the app environment (read at call time).
+func GetAppEnv() string {
+	return envOr("APP_ENV", "development")
 }
 
-// getEnv gets an environment variable with a fallback
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
+// GetPort returns the HTTP port (read at call time).
+func GetPort() string {
+	return envOr("APP_PORT", "4000")
+}
+
+// envOr returns the value of the named env var, or fallback if unset/empty.
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
 	return fallback
-}
-
-// getEnvBool gets a boolean environment variable with a fallback
-func getEnvBool(key string, fallback bool) bool {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
-	}
-	return value == "true" || value == "1" || value == "yes"
 }

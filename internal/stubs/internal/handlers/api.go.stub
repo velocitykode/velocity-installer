@@ -1,0 +1,23 @@
+package handlers
+
+import (
+	"github.com/velocitykode/velocity/router"
+)
+
+// Health returns the API health status.
+func Health(ctx *router.Context) error {
+	return ctx.JSON(router.StatusOK, map[string]string{
+		"status": "healthy",
+	})
+}
+{{- if .Auth }}
+
+// Me returns the authenticated caller. The route is wrapped in the
+// framework's auth.AuthMiddleware, so reaching this handler means the
+// request carried a valid session or token.
+func Me(ctx *router.Context) error {
+	return ctx.JSON(router.StatusOK, map[string]string{
+		"status": "authenticated",
+	})
+}
+{{- end }}

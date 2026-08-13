@@ -51,7 +51,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	}
 
 	if info.HasVelocity {
-		return fmt.Errorf("Velocity already initialized\n\nThis project already has Velocity structure (app/, config/, routes/).\n\nIf you want to create a new project, use:\n  velocity new project-name")
+		return fmt.Errorf("Velocity already initialized\n\nThis project already has Velocity structure (internal/, config/, routes/).\n\nIf you want to create a new project, use:\n  velocity new project-name")
 	}
 
 	prism.Success(fmt.Sprintf("Detected Go project: %s", info.ModuleName))

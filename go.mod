@@ -1,14 +1,14 @@
 module github.com/velocitykode/velocity-installer
 
-go 1.26.3
+go 1.26.5
 
 require (
 	github.com/gofrs/flock v0.13.0
 	github.com/spf13/cobra v1.10.2
 	github.com/velocitykode/prism v0.16.0
-	github.com/velocitykode/velocity v0.72.0
+	github.com/velocitykode/velocity v0.73.0
 	golang.org/x/mod v0.37.0
-	golang.org/x/term v0.38.0
+	golang.org/x/term v0.43.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -39,6 +39,6 @@ require (
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 )

@@ -526,18 +526,14 @@ func TestCreateDirectoryStructure(t *testing.T) {
 			if !tt.wantErr {
 				// Verify all expected directories exist
 				expectedDirs := []string{
-					"app/http/controllers",
-					"app/http/middleware",
-					"app/models",
-					"bootstrap",
 					"config",
 					"database/migrations",
-					"database/factories",
+					"internal/handlers",
+					"internal/middleware",
+					"internal/models",
 					"public",
-					"resources/views",
 					"routes",
 					"storage/logs",
-					"tests",
 				}
 
 				for _, dir := range expectedDirs {

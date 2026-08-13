@@ -803,19 +803,19 @@ func validateProjectName(name string) error {
 }
 
 func createDirectoryStructure(projectPath string) error {
+	// Mirrors the layout the framework's own generators write into
+	// (`vel gen handler` -> internal/handlers, `vel gen model` ->
+	// internal/models, `vel gen migration` -> database/migrations), so a
+	// project initialized here and one scaffolded from a template agree.
 	directories := []string{
-		"app/http/controllers",
-		"app/http/middleware",
-		"app/models",
-		"bootstrap",
 		"config",
 		"database/migrations",
-		"database/factories",
+		"internal/handlers",
+		"internal/middleware",
+		"internal/models",
 		"public",
-		"resources/views",
 		"routes",
 		"storage/logs",
-		"tests",
 	}
 
 	for _, dir := range directories {

@@ -454,16 +454,16 @@ func TestHasVelocityStructure(t *testing.T) {
 		want      bool
 	}{
 		{
-			name: "detects when app/controllers exists",
+			name: "detects when internal/handlers exists",
 			setupFunc: func(dir string) error {
-				return os.MkdirAll(filepath.Join(dir, "app/controllers"), 0755)
+				return os.MkdirAll(filepath.Join(dir, "internal/handlers"), 0755)
 			},
 			want: false, // Only 1 directory, needs 2+
 		},
 		{
-			name: "detects when app/models and routes exist",
+			name: "detects when internal/models and routes exist",
 			setupFunc: func(dir string) error {
-				if err := os.MkdirAll(filepath.Join(dir, "app/models"), 0755); err != nil {
+				if err := os.MkdirAll(filepath.Join(dir, "internal/models"), 0755); err != nil {
 					return err
 				}
 				return os.Mkdir(filepath.Join(dir, "routes"), 0755)
@@ -473,7 +473,7 @@ func TestHasVelocityStructure(t *testing.T) {
 		{
 			name: "detects when all Velocity directories exist",
 			setupFunc: func(dir string) error {
-				dirs := []string{"app/controllers", "app/models", "routes", "database/migrations"}
+				dirs := []string{"internal/handlers", "internal/models", "routes", "database/migrations"}
 				for _, d := range dirs {
 					if err := os.MkdirAll(filepath.Join(dir, d), 0755); err != nil {
 						return err
@@ -498,12 +498,12 @@ func TestHasVelocityStructure(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "detects when database/migrations and app/controllers exist",
+			name: "detects when database/migrations and internal/handlers exist",
 			setupFunc: func(dir string) error {
 				if err := os.MkdirAll(filepath.Join(dir, "database/migrations"), 0755); err != nil {
 					return err
 				}
-				return os.MkdirAll(filepath.Join(dir, "app/controllers"), 0755)
+				return os.MkdirAll(filepath.Join(dir, "internal/handlers"), 0755)
 			},
 			want: true,
 		},
@@ -567,7 +567,7 @@ require (
 					return "", "", err
 				}
 				// Create a subdirectory and start from there
-				subDir := filepath.Join(baseDir, "app", "controllers")
+				subDir := filepath.Join(baseDir, "internal", "handlers")
 				if err := os.MkdirAll(subDir, 0755); err != nil {
 					return "", "", err
 				}
@@ -590,7 +590,7 @@ require (
 					return "", "", err
 				}
 				// Create nested subdirectories
-				deepDir := filepath.Join(baseDir, "app", "controllers", "api")
+				deepDir := filepath.Join(baseDir, "internal", "handlers", "api")
 				if err := os.MkdirAll(deepDir, 0755); err != nil {
 					return "", "", err
 				}
@@ -798,9 +798,9 @@ replace github.com/velocitykode/velocity => ../velocity`
 				}
 				// Create full Velocity structure
 				dirs := []string{
-					"app/controllers",
-					"app/models",
-					"app/views",
+					"internal/handlers",
+					"internal/middleware",
+					"internal/models",
 					"config",
 					"routes",
 					"database/migrations",

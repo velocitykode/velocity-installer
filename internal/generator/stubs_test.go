@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -17,7 +18,7 @@ func TestCopyStubFileWithConfig(t *testing.T) {
 	}{
 		{
 			name:     "copies stub file without config",
-			stubName: "app/http/middleware/middleware.go.stub",
+			stubName: "internal/middleware/middleware.go.stub",
 			config:   nil,
 			wantErr:  false,
 			setupFunc: func(t *testing.T) string {
@@ -56,7 +57,7 @@ func TestCopyStubFileWithConfig(t *testing.T) {
 		},
 		{
 			name:     "creates parent directories when missing",
-			stubName: "app/http/controllers/home_controller.go.stub",
+			stubName: "internal/handlers/home.go.stub",
 			config:   nil,
 			wantErr:  false,
 			setupFunc: func(t *testing.T) string {
@@ -166,7 +167,7 @@ func TestCopyStubFileWithConfig(t *testing.T) {
 		},
 		{
 			name:     "overwrites existing file",
-			stubName: "app/http/middleware/middleware.go.stub",
+			stubName: "internal/middleware/middleware.go.stub",
 			config:   nil,
 			wantErr:  false,
 			setupFunc: func(t *testing.T) string {
@@ -215,7 +216,7 @@ func TestCopyStubFile(t *testing.T) {
 	}{
 		{
 			name:     "copies valid stub file",
-			stubName: "app/http/middleware/middleware.go.stub",
+			stubName: "internal/middleware/middleware.go.stub",
 			wantErr:  false,
 		},
 		{
@@ -266,8 +267,8 @@ func TestGenerateFilesFromStubs(t *testing.T) {
 			validate: func(t *testing.T, config ProjectConfig) {
 				expectedFiles := []string{
 					filepath.Join(config.Name, "main.go"),
-					filepath.Join(config.Name, "app", "http", "controllers", "home_controller.go"),
-					filepath.Join(config.Name, "app", "http", "middleware", "middleware.go"),
+					filepath.Join(config.Name, "internal", "handlers", "home.go"),
+					filepath.Join(config.Name, "internal", "middleware", "middleware.go"),
 					filepath.Join(config.Name, "routes", "web.go"),
 					filepath.Join(config.Name, "config", "config.go"),
 				}
@@ -278,16 +279,23 @@ func TestGenerateFilesFromStubs(t *testing.T) {
 					}
 				}
 
-				// API routes should not exist
-				apiRoute := filepath.Join(config.Name, "routes", "api.go")
-				if _, err := os.Stat(apiRoute); err == nil {
-					t.Error("expected api.go not to exist when API is disabled")
+				// The API pair should not exist
+				for _, file := range []string{
+					filepath.Join(config.Name, "routes", "api.go"),
+					filepath.Join(config.Name, "internal", "handlers", "api.go"),
+				} {
+					if _, err := os.Stat(file); err == nil {
+						t.Errorf("expected %s not to exist when API is disabled", file)
+					}
 				}
 
-				// Auth middleware should not exist
-				authMiddleware := filepath.Join(config.Name, "app", "http", "middleware", "auth.go")
-				if _, err := os.Stat(authMiddleware); err == nil {
-					t.Error("expected auth.go not to exist when Auth is disabled")
+				// Auth adds route wiring, not a hand-rolled middleware file
+				webRoutes, err := os.ReadFile(filepath.Join(config.Name, "routes", "web.go"))
+				if err != nil {
+					t.Fatalf("failed to read web routes: %v", err)
+				}
+				if strings.Contains(string(webRoutes), "auth.AuthMiddleware") {
+					t.Error("expected no auth middleware wiring when Auth is disabled")
 				}
 			},
 		},
@@ -303,14 +311,28 @@ func TestGenerateFilesFromStubs(t *testing.T) {
 			},
 			wantErr: false,
 			validate: func(t *testing.T, config ProjectConfig) {
-				apiRoute := filepath.Join(config.Name, "routes", "api.go")
-				if _, err := os.Stat(apiRoute); os.IsNotExist(err) {
-					t.Error("expected api.go to exist when API is enabled")
+				for _, file := range []string{
+					filepath.Join(config.Name, "routes", "api.go"),
+					filepath.Join(config.Name, "internal", "handlers", "api.go"),
+				} {
+					if _, err := os.Stat(file); os.IsNotExist(err) {
+						t.Errorf("expected %s to exist when API is enabled", file)
+					}
+				}
+
+				// The web pair is replaced by the API pair, not written alongside it
+				for _, file := range []string{
+					filepath.Join(config.Name, "routes", "web.go"),
+					filepath.Join(config.Name, "internal", "handlers", "home.go"),
+				} {
+					if _, err := os.Stat(file); err == nil {
+						t.Errorf("expected %s not to exist when API is enabled", file)
+					}
 				}
 			},
 		},
 		{
-			name: "generates auth middleware when auth enabled",
+			name: "wires framework auth middleware when auth enabled",
 			config: ProjectConfig{
 				Name:     "authapp",
 				Module:   "github.com/test/authapp",
@@ -321,9 +343,12 @@ func TestGenerateFilesFromStubs(t *testing.T) {
 			},
 			wantErr: false,
 			validate: func(t *testing.T, config ProjectConfig) {
-				authMiddleware := filepath.Join(config.Name, "app", "http", "middleware", "auth.go")
-				if _, err := os.Stat(authMiddleware); os.IsNotExist(err) {
-					t.Error("expected auth.go to exist when Auth is enabled")
+				webRoutes, err := os.ReadFile(filepath.Join(config.Name, "routes", "web.go"))
+				if err != nil {
+					t.Fatalf("failed to read web routes: %v", err)
+				}
+				if !strings.Contains(string(webRoutes), "auth.AuthMiddleware") {
+					t.Error("expected framework auth middleware wiring when Auth is enabled")
 				}
 			},
 		},
@@ -341,10 +366,8 @@ func TestGenerateFilesFromStubs(t *testing.T) {
 			validate: func(t *testing.T, config ProjectConfig) {
 				expectedFiles := []string{
 					filepath.Join(config.Name, "main.go"),
-					filepath.Join(config.Name, "app", "http", "controllers", "home_controller.go"),
-					filepath.Join(config.Name, "app", "http", "middleware", "middleware.go"),
-					filepath.Join(config.Name, "app", "http", "middleware", "auth.go"),
-					filepath.Join(config.Name, "routes", "web.go"),
+					filepath.Join(config.Name, "internal", "handlers", "api.go"),
+					filepath.Join(config.Name, "internal", "middleware", "middleware.go"),
 					filepath.Join(config.Name, "routes", "api.go"),
 					filepath.Join(config.Name, "config", "config.go"),
 				}
@@ -369,8 +392,8 @@ func TestGenerateFilesFromStubs(t *testing.T) {
 			validate: func(t *testing.T, config ProjectConfig) {
 				// Verify directories exist
 				expectedDirs := []string{
-					filepath.Join(config.Name, "app", "http", "controllers"),
-					filepath.Join(config.Name, "app", "http", "middleware"),
+					filepath.Join(config.Name, "internal", "handlers"),
+					filepath.Join(config.Name, "internal", "middleware"),
 					filepath.Join(config.Name, "routes"),
 					filepath.Join(config.Name, "config"),
 				}
@@ -418,7 +441,7 @@ func TestCopyStubFileWithConfig_FilePermissions(t *testing.T) {
 	}{
 		{
 			name:     "creates file with correct permissions",
-			stubName: "app/http/middleware/middleware.go.stub",
+			stubName: "internal/middleware/middleware.go.stub",
 			setupFunc: func(t *testing.T) string {
 				return filepath.Join(t.TempDir(), "middleware.go")
 			},
@@ -426,7 +449,7 @@ func TestCopyStubFileWithConfig_FilePermissions(t *testing.T) {
 		},
 		{
 			name:     "succeeds when destination directory has write permissions",
-			stubName: "app/http/controllers/home_controller.go.stub",
+			stubName: "internal/handlers/home.go.stub",
 			setupFunc: func(t *testing.T) string {
 				dir := t.TempDir()
 				os.Chmod(dir, 0755)

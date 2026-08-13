@@ -1,134 +1,34 @@
 package routes
 
 import (
-	"encoding/json"
-	"net/http"
-	"{{.Module}}/app/http/controllers"
-	"{{.Module}}/app/http/middleware"
+	"{{.Module}}/internal/handlers"
 
-	"github.com/velocitykode/velocity"
+	"github.com/velocitykode/velocity"{{ if .Auth }}
+	"github.com/velocitykode/velocity/auth"{{ end }}
 	"github.com/velocitykode/velocity/router"
 )
 
-func RegisterAPI(v *velocity.App) {
-	r := v.Router
+// Register defines all application routes. main.go passes this function
+// to v.Routes(...); the framework calls it with a *velocity.Routing
+// already wired with the configured middleware stacks.
+func Register(r *velocity.Routing) {
+	// Operational endpoint sits at the top level - no middleware stack
+	// so load balancers can probe /health cheaply.
+	r.Health("/health")
+{{ if .Auth }}
+	// Auth manager from Services - powers the framework's
+	// auth.AuthMiddleware. Register a user store before relying on it.
+	authManager := r.Services().Auth.(*auth.Manager)
+{{ end }}
+	// API routes - every route here is prefixed with /api and runs the
+	// API middleware stack.
+	r.API("/api", func(api router.Router) {
+		api.Get("/health", handlers.Health) // /api/health{{ if .Auth }}
 
-	// API v1 routes with middleware
-	api := r.Group("/api/v1")
-
-	// Public endpoints
-	api.Get("/health", healthCheck).Name("api.health")
-	api.Get("/status", statusCheck).Name("api.status")
-
-	{{if .Auth}}
-	// Auth endpoints
-	authController := controllers.AuthController{}
-	api.Post("/login", authController.LoginAPI).Name("api.login")
-	api.Post("/register", authController.Register).Name("api.register")
-
-	// Protected API routes (require authentication)
-	protected := api.Group("")
-	protected.Use(middleware.APIAuthMiddleware)
-
-	// Example protected endpoints
-	protected.Get("/user", getUserProfile).Name("api.user")
-	protected.Put("/user", updateUserProfile).Name("api.user.update")
-	protected.Post("/logout", authController.Logout).Name("api.logout")
-	{{end}}
-
-	// Resource endpoints
-	api.Get("/posts", listPosts).Name("api.posts.index")
-	api.Get("/posts/{id}", getPost).Name("api.posts.show")
-	{{if .Auth}}
-	protected.Post("/posts", createPost).Name("api.posts.create")
-	protected.Put("/posts/{id}", updatePost).Name("api.posts.update")
-	protected.Delete("/posts/{id}", deletePost).Name("api.posts.delete")
-	{{end}}
-}
-
-// healthCheck returns API health status
-func healthCheck(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"status": "healthy",
-		"service": "{{.Name}}",
+		// Authenticated routes - the framework returns 401/403 to
+		// callers without a valid token.
+		api.Group("", func(authed router.Router) {
+			authed.Get("/me", handlers.Me) // /api/me
+		}).Use(auth.AuthMiddleware(authManager)){{ end }}
 	})
 }
-
-// statusCheck returns detailed API status
-func statusCheck(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"status": "online",
-		"version": "1.0.0",
-		"features": map[string]bool{
-			"auth": {{.Auth}},
-			"api": true,
-		},
-	})
-}
-
-// Example handlers (to be implemented)
-func listPosts(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode([]map[string]interface{}{
-		{"id": 1, "title": "First Post", "content": "Hello World"},
-		{"id": 2, "title": "Second Post", "content": "Velocity Framework"},
-	})
-}
-
-func getPost(w http.ResponseWriter, r *http.Request) {
-	// TODO: Extract ID from route params
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id": 1,
-		"title": "First Post",
-		"content": "Hello World",
-	})
-}
-
-{{if .Auth}}
-func getUserProfile(w http.ResponseWriter, r *http.Request) {
-	// Get user ID from context (set by auth middleware)
-	userID := r.Context().Value("userID")
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id": userID,
-		"name": "John Doe",
-		"email": "john@example.com",
-	})
-}
-
-func updateUserProfile(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement profile update
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Profile updated",
-	})
-}
-
-func createPost(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement post creation
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]interface{}{
-		"id": 3,
-		"title": "New Post",
-		"content": "Created via API",
-	})
-}
-
-func updatePost(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement post update
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"message": "Post updated",
-	})
-}
-
-func deletePost(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement post deletion
-	w.WriteHeader(http.StatusNoContent)
-}
-{{end}}

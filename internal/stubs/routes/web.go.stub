@@ -1,14 +1,32 @@
 package routes
 
 import (
-	"{{.Module}}/app/http/controllers"
+	"{{.Module}}/internal/handlers"
 
-	"github.com/velocitykode/velocity"
+	"github.com/velocitykode/velocity"{{ if .Auth }}
+	"github.com/velocitykode/velocity/auth"{{ end }}
 	"github.com/velocitykode/velocity/router"
 )
 
-func Register(v *velocity.App) {
-	r := v.Router
+// Register defines all application routes. main.go passes this function
+// to v.Routes(...); the framework calls it with a *velocity.Routing
+// already wired with the configured middleware stacks.
+func Register(r *velocity.Routing) {
+	// Operational endpoint sits at the top level - no middleware stack
+	// so load balancers can probe /health cheaply.
+	r.Health("/health")
+{{ if .Auth }}
+	// Auth manager from Services - powers the framework's
+	// auth.AuthMiddleware. Register a user store before relying on it.
+	authManager := r.Services().Auth.(*auth.Manager)
+{{ end }}
+	r.Web(func(web router.Router) {
+		web.Get("/", handlers.Home){{ if .Auth }}
 
-	r.Get("/", controllers.Home)
+		// Authenticated routes - the framework redirects guests to
+		// /login (and returns 403 JSON to XHR callers).
+		web.Group("", func(authed router.Router) {
+			authed.Get("/dashboard", handlers.Dashboard)
+		}).Use(auth.AuthMiddleware(authManager)){{ end }}
+	})
 }

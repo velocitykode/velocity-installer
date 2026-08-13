@@ -1,0 +1,19 @@
+package handlers
+
+import (
+	"github.com/velocitykode/velocity/router"
+)
+
+// Home renders the application root.
+func Home(ctx *router.Context) error {
+	return ctx.String(router.StatusOK, "Welcome to Velocity!")
+}
+{{- if .Auth }}
+
+// Dashboard renders an authenticated page. The route is wrapped in the
+// framework's auth.AuthMiddleware, so reaching this handler means the
+// request carried a valid session.
+func Dashboard(ctx *router.Context) error {
+	return ctx.String(router.StatusOK, "Dashboard")
+}
+{{- end }}

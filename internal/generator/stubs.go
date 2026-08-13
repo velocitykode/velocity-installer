@@ -52,18 +52,8 @@ func generateFilesFromStubs(config ProjectConfig) error {
 		return err
 	}
 
-	// Copy home controller
-	if err := copyStubFile("app/http/controllers/home_controller.go.stub", filepath.Join(config.Name, "app", "http", "controllers", "home_controller.go")); err != nil {
-		return err
-	}
-
 	// Copy middleware
-	if err := copyStubFile("app/http/middleware/middleware.go.stub", filepath.Join(config.Name, "app", "http", "middleware", "middleware.go")); err != nil {
-		return err
-	}
-
-	// Copy web routes with template processing
-	if err := copyStubFileWithConfig("routes/web.go.stub", filepath.Join(config.Name, "routes", "web.go"), config); err != nil {
+	if err := copyStubFile("internal/middleware/middleware.go.stub", filepath.Join(config.Name, "internal", "middleware", "middleware.go")); err != nil {
 		return err
 	}
 
@@ -72,19 +62,26 @@ func generateFilesFromStubs(config ProjectConfig) error {
 		return err
 	}
 
-	// Copy API routes if API mode
+	// Handlers and routes come in matching pairs: an API-only project gets
+	// internal/handlers/api.go + routes/api.go, a full-stack project gets
+	// internal/handlers/home.go + routes/web.go. Both route files declare
+	// the same routes.Register that main.go passes to v.Routes(...).
+	handlerStub, routeStub := "home", "web"
 	if config.API {
-		if err := copyStubFileWithConfig("routes/api.go.stub", filepath.Join(config.Name, "routes", "api.go"), config); err != nil {
-			return err
-		}
+		handlerStub, routeStub = "api", "api"
 	}
 
-	// Copy auth files if auth is enabled
-	if config.Auth {
-		if err := copyStubFile("app/http/middleware/auth.go.stub", filepath.Join(config.Name, "app", "http", "middleware", "auth.go")); err != nil {
-			return err
-		}
+	if err := copyStubFileWithConfig(
+		"internal/handlers/"+handlerStub+".go.stub",
+		filepath.Join(config.Name, "internal", "handlers", handlerStub+".go"),
+		config,
+	); err != nil {
+		return err
 	}
 
-	return nil
+	return copyStubFileWithConfig(
+		"routes/"+routeStub+".go.stub",
+		filepath.Join(config.Name, "routes", routeStub+".go"),
+		config,
+	)
 }
