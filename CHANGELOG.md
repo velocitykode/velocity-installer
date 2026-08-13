@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.60] - 2026-08-13
+
+### Fixed
+- ask the frontend questions right after project type
+
 ## [0.21.59] - 2026-08-13
 
 ### Fixed
