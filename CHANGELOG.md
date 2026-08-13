@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.59] - 2026-08-13
+
+### Fixed
+- align scaffolding with the v0.73.0 renamed surface
+
 ## [0.21.58] - 2026-08-13
 
 ## [0.21.57] - 2026-07-26
