@@ -78,6 +78,22 @@ var NewCmd = &cobra.Command{
 			) == labelAPI
 		}
 
+		// The frontend questions follow the project-type answer directly:
+		// picking "Full stack" and then being asked about databases before
+		// anything about the frontend reads like the stack was decided for
+		// you.
+		if !api && ask("stack") {
+			stack = prism.Select(
+				"Frontend stack:",
+				generator.ValidStacks,
+				prism.WithSelectDefault(stack),
+			)
+		}
+
+		if !api && ask("ssr") {
+			ssr = prism.Confirm("Enable Inertia server-side rendering?", prism.WithDefaultNo())
+		}
+
 		if ask("database") {
 			database = prism.Select(
 				"Database:",
@@ -92,18 +108,6 @@ var NewCmd = &cobra.Command{
 				[]string{"memory", "redis"},
 				prism.WithSelectDefault(cache),
 			)
-		}
-
-		if !api && ask("stack") {
-			stack = prism.Select(
-				"Frontend stack:",
-				generator.ValidStacks,
-				prism.WithSelectDefault(stack),
-			)
-		}
-
-		if !api && ask("ssr") {
-			ssr = prism.Confirm("Enable Inertia server-side rendering?", prism.WithDefaultNo())
 		}
 
 		// Validate flags up-front so non-interactive mode fails fast.
