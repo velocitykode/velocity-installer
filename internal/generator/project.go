@@ -60,21 +60,15 @@ func latestTemplateTag(repo string) string {
 	}
 	tagCacheMu.Unlock()
 
-	// 2. Cross-run disk cache (file driver): skips the GitHub API call on the
-	//    next `velocity new` within the TTL. Best-effort; nil store = no cache.
-	if v, ok := loadCachedTag(repo); ok {
-		tagCacheMu.Lock()
-		tagCache[repo] = v
-		tagCacheMu.Unlock()
-		return v
-	}
-
-	// 3. Network: resolve live, then populate both caches (disk only on success).
+	// 2. Network: resolve live. Nothing survives the process. A tag held
+	//    across runs scaffolds against a template release that has already
+	//    been superseded, and the staleness is invisible - the scaffold looks
+	//    successful while pinning an old framework version - so the saved
+	//    round trip is not worth it.
 	tag := fetchLatestTag(repo)
 	tagCacheMu.Lock()
 	tagCache[repo] = tag
 	tagCacheMu.Unlock()
-	storeCachedTag(repo, tag)
 	return tag
 }
 
