@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.67] - 2026-08-21
+
+### Fixed
+- resolve the template tag live on every scaffold
+
 ## [0.21.66] - 2026-08-20
 
 ## [0.21.65] - 2026-08-18
