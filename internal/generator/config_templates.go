@@ -41,7 +41,8 @@ APP_URL=http://localhost:4000
 APP_PORT=4000
 
 # Logging
-LOG_DRIVER=console
+LOG_DRIVER=stack
+LOG_STACK=console,daily
 LOG_LEVEL=info
 
 # Encryption & signing - the installer populates these with random
@@ -105,7 +106,7 @@ SESSION_SAME_SITE=lax
 FILESYSTEM_DISK=local
 
 # Mail
-# MAIL_DRIVER=smtp
+# MAIL_DRIVER=log
 # MAIL_HOST=smtp.mailtrap.io
 # MAIL_PORT=587
 # MAIL_USERNAME=
