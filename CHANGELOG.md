@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.21.78] - 2026-09-18
+
+### Fixed
+- register the log drivers in the init scaffold and default to a stack
+
 ## [0.21.77] - 2026-09-17
 
 ## [0.21.76] - 2026-09-17
