@@ -181,3 +181,49 @@ func TestLauncher(t *testing.T) {
 		}
 	})
 }
+
+func TestBuildLeavesNoTempFiles(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds binaries")
+	}
+	t.Setenv("GOWORK", "off")
+	t.Setenv("GOFLAGS", "-mod=mod")
+	root := fakeProject(t)
+	if out, err := Build(root); err != nil {
+		t.Fatalf("Build: %v\n%s", err, out)
+	}
+	if _, err := os.Stat(filepath.Join(root, BinaryName())); err != nil {
+		t.Fatalf("binary not in place: %v", err)
+	}
+	left, _ := filepath.Glob(filepath.Join(root, ".vel", "tmp", "vel-build-*"))
+	if len(left) != 0 {
+		t.Errorf("temp builds left behind: %v", left)
+	}
+
+	write(t, filepath.Join(root, "broken.go"), "package main\n\nfunc broken() { undefinedThing() }\n")
+	if _, err := Build(root); err == nil {
+		t.Fatal("broken build succeeded")
+	}
+	left, _ = filepath.Glob(filepath.Join(root, ".vel", "tmp", "vel-build-*"))
+	if len(left) != 0 {
+		t.Errorf("temp builds left behind after failure: %v", left)
+	}
+}
+
+func TestLauncherReportsMissingGo(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds binaries")
+	}
+	velBin := filepath.Join(t.TempDir(), BinaryName())
+	if out, err := exec.Command("go", "build", "-o", velBin, "../../cmd/vel").CombinedOutput(); err != nil {
+		t.Fatalf("build vel: %v\n%s", err, out)
+	}
+	root := fakeProject(t)
+	cmd := exec.Command(velBin, "x")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "PATH="+t.TempDir())
+	out, _ := cmd.CombinedOutput()
+	if !strings.Contains(string(out), "executable file not found") {
+		t.Errorf("missing go not explained: %q", out)
+	}
+}

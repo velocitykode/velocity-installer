@@ -77,14 +77,31 @@ func BinaryName() string {
 // environment passes through untouched: the project decides CGO, GOFLAGS, and
 // toolchain, never the launcher. Compiler output is returned, not printed, so a
 // successful (cached) build stays silent.
+//
+// The binary is built under .vel/tmp and renamed into place, so a concurrent
+// build (another vel call, or `vel serve --watch` refreshing ./vel) never
+// leaves a half-written ./vel for someone to execute.
 func Build(root string) (output []byte, err error) {
-	cmd := exec.Command("go", "build", "-o", BinaryName(), ".")
+	tmpDir := filepath.Join(root, ".vel", "tmp")
+	if err := os.MkdirAll(tmpDir, 0o700); err != nil {
+		return nil, err
+	}
+	buildDir, err := os.MkdirTemp(tmpDir, "vel-build-*")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(buildDir)
+	tmpName := filepath.Join(buildDir, BinaryName())
+
+	cmd := exec.Command("go", "build", "-o", tmpName, ".")
 	cmd.Dir = root
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
-	err = cmd.Run()
-	return buf.Bytes(), err
+	if err := cmd.Run(); err != nil {
+		return buf.Bytes(), err
+	}
+	return buf.Bytes(), os.Rename(tmpName, filepath.Join(root, BinaryName()))
 }
 
 // Main runs the launcher and returns the process exit code. On Unix a
@@ -111,6 +128,10 @@ func Main(args []string, stderr io.Writer) int {
 		if !haveLastGood {
 			fmt.Fprintf(stderr, "vel: build failed: %v\n", err)
 			return 1
+		}
+		if len(out) == 0 {
+			// No compiler output (go missing from PATH, rename failed): say why.
+			fmt.Fprintf(stderr, "vel: %v\n", err)
 		}
 		fmt.Fprintln(stderr, "vel: build failed, running the last good build (output may reflect old code)")
 	}
