@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.0] - 2026-09-23
+
+### Added
+- ship vel launcher alongside velocity
+
+### Fixed
+- build atomically and explain silent build failures
+
 ## [0.21.84] - 2026-09-22
 
 ## [0.21.83] - 2026-09-19
