@@ -139,8 +139,8 @@ var NewCmd = &cobra.Command{
 				prism.NextSteps([]string{
 					"Start your database server",
 					fmt.Sprintf("cd %s", projectName),
-					"./vel migrate",
-					"./vel serve",
+					"vel migrate",
+					"vel serve",
 				})
 				return
 			}
@@ -153,14 +153,14 @@ var NewCmd = &cobra.Command{
 		prism.Success("Project ready")
 		prism.NextSteps([]string{
 			fmt.Sprintf("cd %s", projectName),
-			"./vel serve",
+			"vel serve",
 		})
 		prism.KeyValue("App", prism.Highlight("http://localhost:4000"))
 		if !config.API {
 			prism.KeyValue("Vite", prism.Highlight("http://localhost:5173"))
 		}
 		prism.Newline()
-		prism.Muted("More: ./vel migrate, ./vel routes, ./vel gen handler")
+		prism.Muted("More: vel migrate, vel routes, vel gen handler")
 		prism.Newline()
 	},
 }

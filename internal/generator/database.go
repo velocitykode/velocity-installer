@@ -90,7 +90,7 @@ func ensureDatabaseReady(projectPath string) (ready bool, err error) {
 	conn, dialErr := net.DialTimeout("tcp", target, 3*time.Second)
 	if dialErr != nil {
 		prism.Warning(fmt.Sprintf("%s not reachable at %s", label, target))
-		prism.Muted(fmt.Sprintf("Start %s, then run: cd %s && ./vel migrate", label, projectPath))
+		prism.Muted(fmt.Sprintf("Start %s, then run: cd %s && vel migrate", label, projectPath))
 		return false, nil
 	}
 	_ = conn.Close()
@@ -100,7 +100,7 @@ func ensureDatabaseReady(projectPath string) (ready bool, err error) {
 	created, createErr := createDatabase(env)
 	if createErr != nil {
 		prism.Warning(fmt.Sprintf("Could not create database %s: %s", env.Database, createErr))
-		prism.Muted(fmt.Sprintf("Create it manually, then run: cd %s && ./vel migrate", projectPath))
+		prism.Muted(fmt.Sprintf("Create it manually, then run: cd %s && vel migrate", projectPath))
 		return false, nil
 	}
 	if created {

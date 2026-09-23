@@ -104,7 +104,7 @@ func runInit(cmd *cobra.Command, args []string) error {
 	prism.Success("Velocity initialized successfully!")
 	prism.NextSteps([]string{
 		"go mod download",
-		"./vel serve",
+		"vel serve",
 	})
 
 	return nil

@@ -268,7 +268,7 @@ go run main.go
 
 Or using the Velocity CLI:
 ` + "```bash" + `
-./vel serve
+vel serve    # without the velocity installer: ./vel serve
 ` + "```" + `
 
 ### Production
