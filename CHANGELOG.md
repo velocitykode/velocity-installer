@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.1] - 2026-09-23
+
+### Fixed
+- point next-step hints at vel instead of ./vel
+
 ## [0.22.0] - 2026-09-23
 
 ### Added
