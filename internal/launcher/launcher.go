@@ -78,30 +78,26 @@ func BinaryName() string {
 // toolchain, never the launcher. Compiler output is returned, not printed, so a
 // successful (cached) build stays silent.
 //
-// The binary is built under .vel/tmp and renamed into place, so a concurrent
-// build (another vel call, or `vel serve --watch` refreshing ./vel) never
-// leaves a half-written ./vel for someone to execute.
+// Building straight to ./vel lets Go skip the link when ./vel is already up to
+// date (~0.25s instead of a full relink). Go links in its temp dir and renames
+// the result into place; pointing GOTMPDIR at .vel/tmp keeps that dir on the
+// project's filesystem, so the swap is always an atomic rename and nobody can
+// execute a half-written ./vel (another vel call, or `vel serve --watch`).
 func Build(root string) (output []byte, err error) {
-	tmpDir := filepath.Join(root, ".vel", "tmp")
-	if err := os.MkdirAll(tmpDir, 0o700); err != nil {
-		return nil, err
-	}
-	buildDir, err := os.MkdirTemp(tmpDir, "vel-build-*")
-	if err != nil {
-		return nil, err
-	}
-	defer os.RemoveAll(buildDir)
-	tmpName := filepath.Join(buildDir, BinaryName())
-
-	cmd := exec.Command("go", "build", "-o", tmpName, ".")
+	cmd := exec.Command("go", "build", "-o", BinaryName(), ".")
 	cmd.Dir = root
+	cmd.Env = os.Environ()
+	if os.Getenv("GOTMPDIR") == "" {
+		tmpDir := filepath.Join(root, ".vel", "tmp")
+		if err := os.MkdirAll(tmpDir, 0o700); err == nil {
+			cmd.Env = append(cmd.Env, "GOTMPDIR="+tmpDir)
+		}
+	}
 	var buf bytes.Buffer
 	cmd.Stdout = &buf
 	cmd.Stderr = &buf
-	if err := cmd.Run(); err != nil {
-		return buf.Bytes(), err
-	}
-	return buf.Bytes(), os.Rename(tmpName, filepath.Join(root, BinaryName()))
+	err = cmd.Run()
+	return buf.Bytes(), err
 }
 
 // Main runs the launcher and returns the process exit code. On Unix a
@@ -130,7 +126,7 @@ func Main(args []string, stderr io.Writer) int {
 			return 1
 		}
 		if len(out) == 0 {
-			// No compiler output (go missing from PATH, rename failed): say why.
+			// No compiler output (go missing from PATH): say why.
 			fmt.Fprintf(stderr, "vel: %v\n", err)
 		}
 		fmt.Fprintln(stderr, "vel: build failed, running the last good build (output may reflect old code)")

@@ -195,7 +195,7 @@ func TestBuildLeavesNoTempFiles(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(root, BinaryName())); err != nil {
 		t.Fatalf("binary not in place: %v", err)
 	}
-	left, _ := filepath.Glob(filepath.Join(root, ".vel", "tmp", "vel-build-*"))
+	left, _ := filepath.Glob(filepath.Join(root, ".vel", "tmp", "go-build*"))
 	if len(left) != 0 {
 		t.Errorf("temp builds left behind: %v", left)
 	}
@@ -204,7 +204,7 @@ func TestBuildLeavesNoTempFiles(t *testing.T) {
 	if _, err := Build(root); err == nil {
 		t.Fatal("broken build succeeded")
 	}
-	left, _ = filepath.Glob(filepath.Join(root, ".vel", "tmp", "vel-build-*"))
+	left, _ = filepath.Glob(filepath.Join(root, ".vel", "tmp", "go-build*"))
 	if len(left) != 0 {
 		t.Errorf("temp builds left behind after failure: %v", left)
 	}
