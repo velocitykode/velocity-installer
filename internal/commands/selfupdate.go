@@ -75,11 +75,18 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 
 	latestVersion := strings.TrimPrefix(release.TagName, "v")
 	currentVersion := strings.TrimPrefix(InstallerVersion, "v")
-	if latestVersion == currentVersion {
+	upToDate := latestVersion == currentVersion
+	// An older installer's self-update replaced only velocity, so an
+	// up-to-date velocity may still be missing its vel launcher.
+	if upToDate && launcherPresent(filepath.Dir(execPath)) {
 		prism.Success(fmt.Sprintf("Already up to date (v%s)", currentVersion))
 		return nil
 	}
-	prism.Info(fmt.Sprintf("New version available: v%s (current: v%s)", latestVersion, currentVersion))
+	if upToDate {
+		prism.Info(fmt.Sprintf("velocity is up to date (v%s); installing the vel launcher", currentVersion))
+	} else {
+		prism.Info(fmt.Sprintf("New version available: v%s (current: v%s)", latestVersion, currentVersion))
+	}
 
 	assetName := fmt.Sprintf("velocity-%s-%s.tar.gz", runtime.GOOS, runtime.GOARCH)
 	var archiveURL, checksumURL string
@@ -120,23 +127,71 @@ func runSelfUpdate(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	prism.Step("Extracting binary...")
-	binaryBytes, err := extractBinary(archiveBytes, "velocity")
-	if err != nil {
-		return fmt.Errorf("failed to extract binary: %w", err)
+	if !upToDate {
+		prism.Step("Extracting binary...")
+		binaryBytes, err := extractBinary(archiveBytes, "velocity")
+		if err != nil {
+			return fmt.Errorf("failed to extract binary: %w", err)
+		}
+
+		prism.Step("Installing update...")
+		if err := installBinary(execPath, binaryBytes); err != nil {
+			return fmt.Errorf("failed to install update: %w", err)
+		}
+
+		if runtime.GOOS == "darwin" {
+			_ = exec.Command("xattr", "-dr", "com.apple.quarantine", execPath).Run()
+		}
 	}
 
-	prism.Step("Installing update...")
-	if err := installBinary(execPath, binaryBytes); err != nil {
-		return fmt.Errorf("failed to install update: %w", err)
+	// The vel launcher ships in the same verified archive; keep it beside
+	// velocity so non-Homebrew installs get it too. A failure here never
+	// undoes the velocity update above.
+	velPath, err := installLauncher(archiveBytes, filepath.Dir(execPath))
+	switch {
+	case errors.Is(err, errLauncherMissing):
+		prism.Muted("This release does not include the vel launcher")
+	case err != nil:
+		prism.Warning(fmt.Sprintf("installing vel failed: %v", err))
+	default:
+		prism.Success("Installed vel at " + velPath)
 	}
 
-	if runtime.GOOS == "darwin" {
-		_ = exec.Command("xattr", "-dr", "com.apple.quarantine", execPath).Run()
+	if !upToDate {
+		prism.Success(fmt.Sprintf("Updated to v%s", latestVersion))
 	}
-
-	prism.Success(fmt.Sprintf("Updated to v%s", latestVersion))
 	return nil
+}
+
+var errLauncherMissing = errors.New("vel launcher not in archive")
+
+func launcherName() string {
+	if runtime.GOOS == "windows" {
+		return "vel.exe"
+	}
+	return "vel"
+}
+
+func launcherPresent(dir string) bool {
+	_, err := os.Stat(filepath.Join(dir, launcherName()))
+	return err == nil
+}
+
+// installLauncher extracts the vel launcher from a release archive into dir.
+func installLauncher(archive []byte, dir string) (string, error) {
+	name := launcherName()
+	contents, err := extractBinary(archive, name)
+	if err != nil {
+		return "", errLauncherMissing
+	}
+	path := filepath.Join(dir, name)
+	if err := installBinary(path, contents); err != nil {
+		return "", err
+	}
+	if runtime.GOOS == "darwin" {
+		_ = exec.Command("xattr", "-dr", "com.apple.quarantine", path).Run()
+	}
+	return path, nil
 }
 
 func fetchLatestRelease() (*githubRelease, error) {

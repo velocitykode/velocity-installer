@@ -14,11 +14,25 @@ builds:
       - arm64
     ldflags:
       - -s -w
+  - id: vel
+    main: ./cmd/vel
+    binary: vel
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
 
 archives:
   - id: velocity
     ids:
       - velocity
+      - vel
     name_template: "velocity-{{ .Os }}-{{ .Arch }}"
     formats:
       - tar.gz
@@ -43,6 +57,7 @@ homebrew_casks:
     directory: Casks
     binaries:
       - velocity
+      - vel
     homepage: "https://github.com/velocitykode/velocity-installer"
     description: "Installer for the Velocity Go web framework"
     url:
@@ -51,5 +66,5 @@ homebrew_casks:
       post:
         install: |
           if OS.mac?
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/velocity"]
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/velocity", "#{staged_path}/vel"]
           end
