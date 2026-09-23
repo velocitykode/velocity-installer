@@ -11,13 +11,14 @@ brew tap velocitykode/tap
 brew install velocity
 ```
 
+Installs both `velocity` and `vel`. Update both with `brew upgrade --cask velocity`.
+
 ## Commands
 
 ```bash
 velocity new <name>     # Create a new Velocity project
 velocity init           # Initialize Velocity in existing project
 velocity config         # Manage CLI configuration
-velocity self-update    # Update to latest version (velocity and vel)
 
 vel <command>           # Run a command in the current project (vel serve, vel migrate, vel gen ...)
 ```

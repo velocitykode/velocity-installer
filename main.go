@@ -47,13 +47,9 @@ func main() {
 	// reproducibility, not just the installer semver.
 	rootCmd.SetVersionTemplate(buildVersionTemplate(Version))
 
-	// Set version for self-update
-	commands.InstallerVersion = Version
-
 	rootCmd.AddCommand(commands.NewCmd)
 	// rootCmd.AddCommand(commands.InitCmd) // TODO: Re-enable after fixing stub generation
 	rootCmd.AddCommand(commands.ConfigCmd)
-	rootCmd.AddCommand(commands.SelfUpdateCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
