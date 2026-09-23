@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.2] - 2026-09-23
+
+### Changed
+- refactor: remove self-update command
+
 ## [0.22.1] - 2026-09-23
 
 ### Fixed
