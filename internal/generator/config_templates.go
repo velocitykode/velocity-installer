@@ -129,6 +129,11 @@ FILESYSTEM_DISK=local
 # AWS_DEFAULT_REGION=us-east-1
 # AWS_BUCKET=
 {{ if not .API }}
+# View
+# Inertia page rendered for a failed browser request, at its real status;
+# empty means a full reload instead. Enable once the frontend has the page.
+# VIEW_ERROR_PAGE=Error
+
 # View SSR (Inertia)
 # VIEW_SSR_ENABLED=false
 # VIEW_SSR_URL=http://127.0.0.1:13714/render

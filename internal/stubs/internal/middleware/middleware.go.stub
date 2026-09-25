@@ -4,9 +4,10 @@ import (
 	"github.com/velocitykode/velocity/router"
 )
 
-// LoggingMiddleware logs every request. Panic recovery, CORS, and body
-// limits are framework middleware - wire router.CORS / router.BodyLimit
-// and the exceptions handler instead of hand-rolling them here.
+// LoggingMiddleware logs every request. CORS and body limits are
+// framework middleware - wire router.CORS / router.BodyLimit instead of
+// hand-rolling them here. Panic recovery needs no middleware: the router
+// sends every handler error and panic through the error handler.
 func LoggingMiddleware(next router.HandlerFunc) router.HandlerFunc {
 	return func(ctx *router.Context) error {
 		ctx.Log().Info("Request",
