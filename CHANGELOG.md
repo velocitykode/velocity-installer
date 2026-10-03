@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.22.18] - 2026-10-03
+
 ## [0.22.17] - 2026-10-02
 
 ## [0.22.16] - 2026-09-30
